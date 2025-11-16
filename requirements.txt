@@ -1,0 +1,18 @@
+# Web Framework and Server
+fastapi
+uvicorn[standard]
+
+# Data Validation and Configuration
+pydantic
+pydantic-settings
+
+# Supabase (PostgreSQL and S3)
+supabase  # Official Python client for Supabase
+
+# LLM and File Processing (Placeholders for now)
+# docling (You mentioned this for file processing)
+# google-genai (For Gemini API access)
+# deepseek-client (If you use DeepSeek)
+
+# Environment Management
+python-dotenv
