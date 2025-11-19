@@ -1,6 +1,9 @@
 import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from supabase import create_client, Client
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # 1. Configuration Class
 class Settings(BaseSettings):
@@ -8,8 +11,8 @@ class Settings(BaseSettings):
     # model_config = SettingsConfigDict(env_file='.env', extra='ignore') # If you use Pydantic V2
 
     # Supabase Credentials
-    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
-    SUPABASE_KEY: str = os.getenv("SUPABASE_KEY", "")
+    SUPABASE_URL: str = os.getenv("SUPABASE_URL")
+    SUPABASE_KEY: str = os.getenv("SUPABASE_KEY")
 
     # LLM API Key (Example for Gemini)
     # GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
