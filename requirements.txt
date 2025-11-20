@@ -5,6 +5,7 @@ uvicorn[standard]
 # Data Validation and Configuration
 pydantic
 pydantic-settings
+python-multipart
 
 # Supabase (PostgreSQL and S3)
 supabase  # Official Python client for Supabase
