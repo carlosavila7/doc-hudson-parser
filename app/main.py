@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from .supabase.supabase_router import supabase_router
+from .supabase.supabase_router import router as supabase_router
 
 app = FastAPI(
     title="Modern File Processing API",
