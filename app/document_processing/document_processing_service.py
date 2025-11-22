@@ -1,12 +1,17 @@
 import io
 import os
 import shutil
+import logging
+import imagehash
+import re
 
-from pathlib import Path
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.datamodel.base_models import InputFormat, DocumentStream
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling_core.types.doc import ImageRefMode
+from pathlib import Path
+from PIL import Image
+
 
 from ..supabase.supabase_service import SupabaseService
 
@@ -14,6 +19,90 @@ from ..supabase.supabase_service import SupabaseService
 class DocumentProcessingService:
     def __init__(self):
         self.supabase_service = SupabaseService()
+        self.logger = logging.getLogger(__name__)
+
+    def handle_image_references(self, artifacts_folder_path: Path, md_file_path: Path):
+        repeated_images = self.get_repeated_images(artifacts_folder_path)
+
+        repeated_filenames = [path.name for path in repeated_images]
+
+        if (not md_file_path.exists()):
+            raise FileNotFoundError(f"File not found: {md_file_path}")
+
+        with open(md_file_path, 'r') as f:
+            content = f.read()
+
+        image_tag_pattern = r'!\[.*?\]\((.*?)\)'
+
+        def handle_image_reference(match):
+            image_path = match.group(1)
+            filename = image_path.split('/')[-1]
+
+            if filename in repeated_filenames: # remove image
+                return ''
+            else: # update to relative path
+                relative_path = "/".join(match.group(1).split('/')[-2:])
+                image_tag = f'![Image](./{relative_path})'
+                self.logger.info(f'Update imgage tag to ${image_tag}')
+                return image_tag
+
+        updated_content = re.sub(image_tag_pattern, handle_image_reference, content)
+
+        self.logger.info(
+            f'References to repeated images removed from .md file.')
+
+        with open(md_file_path, 'w') as f:
+            f.write(updated_content)
+
+        for repeated_image in repeated_images:
+            Path(repeated_image).unlink()
+            self.logger.info(f'Deleted {repeated_image}')
+
+    def get_repeated_images(self, target_path: Path):
+        similarity_threshold = 10
+
+        if not target_path.exists():
+            raise FileNotFoundError(f"Folder not found: {target_path}")
+
+        images = sorted(target_path.rglob("*.png"))
+        unique_images = []
+
+        for image in images:
+            if (len(unique_images) == 0):
+                unique_images.append([image])
+                continue
+
+            has_similar = False
+
+            for unique_image in unique_images:
+                img_a = unique_image[0]
+                img_b = image
+
+                hash_a = imagehash.phash(Image.open(img_a))
+                hash_b = imagehash.phash(Image.open(img_b))
+
+                hamming_distance = hash_a - hash_b
+
+                are_images_similar = hamming_distance < similarity_threshold
+
+                if (are_images_similar):
+                    unique_image.append(img_b)
+                    has_similar = True
+                    break
+
+            if (not has_similar):
+                unique_images.append([image])
+
+        repeated_images = [r for r in unique_images if len(r) > 1]
+        repeated_images = [
+            s for sub in repeated_images for s in sub]  # flat list
+
+        unique_images = [u for u in unique_images if len(u) == 1]
+
+        self.logger.info(
+            f'{len(repeated_images)} repeated images have been found ({len(unique_images)} unique image(s) to keep).')
+
+        return repeated_images
 
     def parse_pdf_to_markdown(self, path: str, start_page: int = None, end_page: int = None, bucket: str = 'pdf-files'):
         output_dir = Path("temp/").resolve()
@@ -58,7 +147,7 @@ class DocumentProcessingService:
         folder_path = "temp/"
 
         if not os.path.exists(folder_path):
-            print(f"The folder '{folder_path}' does not exist.")
+            self.logger.error(f"The folder '{folder_path}' does not exist.")
             return
 
         for item in os.listdir(folder_path):
@@ -72,5 +161,8 @@ class DocumentProcessingService:
                     shutil.rmtree(item_path)
 
             except Exception as e:
-                print(f"Failed to delete {item_path}. Reason: {e}")
+                self.logger.error(f"Failed to delete {item_path}. Reason: {e}")
+
+        self.logger.info(f'{folder_path} folder has been flushed')
+
 
