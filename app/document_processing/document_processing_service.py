@@ -22,6 +22,24 @@ class DocumentProcessingService:
         self.logger = logging.getLogger(__name__)
 
     def handle_image_references(self, artifacts_folder_path: Path, md_file_path: Path):
+        """Updates markdown image links and cleans up redundant image files.
+
+        This method first identifies visually similar (repeated) images in the 
+        artifacts folder. It then parses the Markdown file to:
+        1. Remove any image tags (`![]()`) that reference these repeated images.
+        2. Convert valid image references from absolute paths to relative paths
+        (preserving only the last two path segments, e.g., './parent/image.png').
+
+        After updating the Markdown content, it permanently deletes the detected 
+        repeated image files from the filesystem.
+
+        Args:
+            artifacts_folder_path (Path): The directory containing the images to analyze.
+            md_file_path (Path): The Markdown file to read and modify.
+
+        Raises:
+            FileNotFoundError: If the md_file_path does not exist.
+        """
         repeated_images = self.get_repeated_images(artifacts_folder_path)
 
         repeated_filenames = [path.name for path in repeated_images]
@@ -38,15 +56,16 @@ class DocumentProcessingService:
             image_path = match.group(1)
             filename = image_path.split('/')[-1]
 
-            if filename in repeated_filenames: # remove image
+            if filename in repeated_filenames:  # remove image
                 return ''
-            else: # update to relative path
+            else:  # update to relative path
                 relative_path = "/".join(match.group(1).split('/')[-2:])
                 image_tag = f'![Image](./{relative_path})'
                 self.logger.info(f'Update imgage tag to ${image_tag}')
                 return image_tag
 
-        updated_content = re.sub(image_tag_pattern, handle_image_reference, content)
+        updated_content = re.sub(
+            image_tag_pattern, handle_image_reference, content)
 
         self.logger.info(
             f'References to repeated images removed from .md file.')
@@ -59,6 +78,24 @@ class DocumentProcessingService:
             self.logger.info(f'Deleted {repeated_image}')
 
     def get_repeated_images(self, target_path: Path):
+        """Scans a directory for visually similar PNG images using perceptual hashing.
+
+        This method recursively searches the target path for .png files and groups
+        them based on visual similarity (pHash Hamming distance < 10). It identifies
+        clusters of duplicates and returns a flattened list of all images involved
+        in these clusters.
+
+        Args:
+            target_path (Path): The root directory to recursively search for images.
+
+        Returns:
+            list[Path]: A flat list containing all file paths that are part of a 
+            similarity cluster. This includes both the "originals" and their 
+            duplicates.
+
+        Raises:
+            FileNotFoundError: If the provided target_path does not exist.
+        """
         similarity_threshold = 10
 
         if not target_path.exists():
@@ -105,6 +142,24 @@ class DocumentProcessingService:
         return repeated_images
 
     def parse_pdf_to_markdown(self, path: str, start_page: int = None, end_page: int = None, bucket: str = 'pdf-files'):
+        """Downloads a PDF from storage and converts it to a Markdown file.
+
+        This method retrieves a PDF file from the specified Supabase S3 bucket,
+        configures the pipeline to handle image extraction and scaling, and 
+        saves the resulting Markdown content to a local temporary directory.
+
+        Args:
+            path (str): The file path relative to the root of the S3 bucket.
+            start_page (int, optional): The starting page number for conversion 
+                (inclusive). Defaults to None.
+            end_page (int, optional): The ending page number for conversion 
+                (inclusive). Defaults to None.
+            bucket (str, optional): The name of the storage bucket to download 
+                from. Defaults to 'pdf-files'.
+
+        Returns:
+            Path: A pathlib object pointing to the generated local Markdown file.
+        """
         output_dir = Path("temp/").resolve()
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -164,5 +219,3 @@ class DocumentProcessingService:
                 self.logger.error(f"Failed to delete {item_path}. Reason: {e}")
 
         self.logger.info(f'{folder_path} folder has been flushed')
-
-
