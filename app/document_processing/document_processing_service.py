@@ -1,4 +1,6 @@
 import io
+import os
+import shutil
 
 from pathlib import Path
 from docling.datamodel.pipeline_options import PdfPipelineOptions
@@ -13,7 +15,7 @@ class DocumentProcessingService:
     def __init__(self):
         self.supabase_service = SupabaseService()
 
-    def parse_pdf_to_markdown(self, path: str, bucket: str = 'pdf-files'):
+    def parse_pdf_to_markdown(self, path: str, start_page: int = None, end_page: int = None, bucket: str = 'pdf-files'):
         output_dir = Path("temp/").resolve()
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -22,17 +24,23 @@ class DocumentProcessingService:
         file_stream = io.BytesIO(file)
         file_name = path.split('/')[-1]
 
+        custom_range = (
+            start_page,
+            end_page
+        ) if start_page is not None and end_page is not None else None
+
         input_source = DocumentStream(name=file_name, stream=file_stream)
-        
+
         options = PdfPipelineOptions()
         options.images_scale = 2.0
         options.generate_picture_images = True
 
         converter = DocumentConverter(format_options={
-            InputFormat.PDF: PdfFormatOption(pipeline_options=options)
+            InputFormat.PDF: PdfFormatOption(pipeline_options=options),
         })
 
-        res = converter.convert(input_source)
+        res = converter.convert(
+            input_source, page_range=custom_range) if custom_range is not None else converter.convert(input_source)
 
         doc_filename = res.input.file.stem
 
@@ -43,38 +51,26 @@ class DocumentProcessingService:
 
         return md_path
 
+    def flush_temp(self):
+        """
+        Deletes all files and subdirectories within a specific folder.
+        """
+        folder_path = "temp/"
 
-def parse_document(input_doc_path, output_path, start_page, end_page):
-    output_dir = Path(output_path).resolve()
-    output_dir.mkdir(parents=True, exist_ok=True)
+        if not os.path.exists(folder_path):
+            print(f"The folder '{folder_path}' does not exist.")
+            return
 
-    options = PdfPipelineOptions()
+        for item in os.listdir(folder_path):
+            item_path = os.path.join(folder_path, item)
 
-    options.images_scale = 2.0
-    options.generate_page_images = False
-    options.generate_picture_images = True
-    options.do_picture_description = False
+            try:
+                if os.path.isfile(item_path) or os.path.islink(item_path):
+                    os.unlink(item_path)
 
-    converter = DocumentConverter(
-        format_options={
-            InputFormat.PDF: PdfFormatOption(pipeline_options=options)
-        }
-    )
+                elif os.path.isdir(item_path):
+                    shutil.rmtree(item_path)
 
-    page_range_to_pass = {
-        "start": start_page,
-        "end": end_page
-    } if start_page is not None and end_page is not None else None
+            except Exception as e:
+                print(f"Failed to delete {item_path}. Reason: {e}")
 
-    print('page_range_to_pass (verified type):',
-          page_range_to_pass, type(page_range_to_pass))
-
-    conv_res = converter.convert(
-        input_doc_path)
-
-    doc_filename = conv_res.input.file.stem
-
-    md_path = output_dir / f"{doc_filename}.md"
-
-    conv_res.document.save_as_markdown(
-        str(md_path), image_mode=ImageRefMode.REFERENCED)
