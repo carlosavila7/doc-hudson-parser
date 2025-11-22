@@ -17,3 +17,9 @@ supabase  # Official Python client for Supabase
 
 # Environment Management
 python-dotenv
+
+# docling document processing
+docling
+docling-core
+Pillow
+ImageHash

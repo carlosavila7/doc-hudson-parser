@@ -2,6 +2,7 @@
 .venv/
 venv/
 .devcontainer/
+temp/
 
 __pycache__/
 *.pyc
