@@ -4,22 +4,23 @@ import time
 
 from datetime import datetime
 
+
 class DailyLimitExceededError(Exception):
     """Raised when the daily quota of 250 requests is reached."""
     pass
+
 
 class RateLimiter:
     def __init__(self, db_path='request_logs.db'):
         self.db_path = db_path
         self._init_db()
-        
+
         # Configuration Constants
         self.MAX_RPM = 10             # Rule #1 - Requests per minute
         self.MAX_TPM = 250_000        # Rule #2 - Tokens per minute
         self.MAX_RPD = 250            # Rule #3 - Requests per day
 
         self.logger = logging.getLogger(__name__)
-
 
     def _init_db(self):
         """Setup the table and index if they don't exist."""
@@ -31,7 +32,8 @@ class RateLimiter:
                 )
             ''')
             # Index is crucial for performance since we filter by timestamp constantly
-            conn.execute('CREATE INDEX IF NOT EXISTS idx_ts ON requests(timestamp)')
+            conn.execute(
+                'CREATE INDEX IF NOT EXISTS idx_ts ON requests(timestamp)')
 
     def wait_for_slot_gemini_free_tier(self):
         """
@@ -44,13 +46,13 @@ class RateLimiter:
             now = time.time()
             one_minute_ago = now - 60
             one_day_ago = now - 86400
-            
+
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
 
                 # 1. Check Daily Limit (Rule #3)
                 cursor.execute(
-                    'SELECT COUNT(*) FROM requests WHERE timestamp > ?', 
+                    'SELECT COUNT(*) FROM requests WHERE timestamp > ?',
                     (one_day_ago,)
                 )
                 daily_requests = cursor.fetchone()[0]
@@ -60,15 +62,19 @@ class RateLimiter:
                         'SELECT * FROM requests ORDER BY timestamp'
                     )
                     first_request_timestamp = cursor.fetchone()[0]
-                    first_request_dt = datetime.fromtimestamp(first_request_timestamp)
+                    first_request_dt = datetime.fromtimestamp(
+                        first_request_timestamp)
 
                     raise DailyLimitExceededError(
                         f"Daily limit reached: {daily_requests}/{self.MAX_RPD} requests in the last 24h. First request made at {first_request_dt}"
                     )
+                else:
+                    self.logger.info(
+                        f'Rule #3 OK - daily requests:\t {daily_requests}\t (max: {self.MAX_RPD})')
 
                 # 2. Check Minute Limits (Rule #1 & #2)
                 cursor.execute(
-                    'SELECT COUNT(*), SUM(tokens) FROM requests WHERE timestamp > ?', 
+                    'SELECT COUNT(*), SUM(tokens) FROM requests WHERE timestamp > ?',
                     (one_minute_ago,)
                 )
                 row = cursor.fetchone()
@@ -81,10 +87,15 @@ class RateLimiter:
                 tpm_ok = minute_tokens < self.MAX_TPM
 
                 if rpm_ok and tpm_ok:
+                    self.logger.info(
+                        f'Rule #1 OK - minute requests:\t {minute_requests}\t (max: {self.MAX_RPM})')
+                    self.logger.info(
+                        f'Rule #2 OK - minute tokens:\t {minute_tokens}\t (max: {self.MAX_TPM})')
                     return True
-                
+
                 # If we are here, we hit a minute limit.
-                self.logger.info(f"Limit hit (Reqs: {minute_requests}/{self.MAX_RPM}, Tokens: {minute_tokens}/{self.MAX_TPM}). Waiting 60s...")
+                self.logger.info(
+                    f"Limit hit (Reqs: {minute_requests}/{self.MAX_RPM}, Tokens: {minute_tokens}/{self.MAX_TPM}). Waiting 60s...")
                 time.sleep(60)
                 # The loop will now restart and check again
 
@@ -96,12 +107,13 @@ class RateLimiter:
         with sqlite3.connect(self.db_path) as conn:
             # Insert the new record
             conn.execute(
-                'INSERT INTO requests (timestamp, tokens) VALUES (?, ?)', 
+                'INSERT INTO requests (timestamp, tokens) VALUES (?, ?)',
                 (now, tokens)
             )
-            
+
             # Optimization: Delete records older than 24 hours + small buffer.
             # We don't need them for any calculation anymore.
-            cleanup_threshold = now - 86500 
-            conn.execute('DELETE FROM requests WHERE timestamp < ?', (cleanup_threshold,))
+            cleanup_threshold = now - 86500
+            conn.execute('DELETE FROM requests WHERE timestamp < ?',
+                         (cleanup_threshold,))
             conn.commit()
