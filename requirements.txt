@@ -12,7 +12,7 @@ supabase  # Official Python client for Supabase
 
 # LLM and File Processing (Placeholders for now)
 # docling (You mentioned this for file processing)
-# google-genai (For Gemini API access)
+google-genai
 # deepseek-client (If you use DeepSeek)
 
 # Environment Management

@@ -35,7 +35,7 @@ class RateLimiter:
             conn.execute(
                 'CREATE INDEX IF NOT EXISTS idx_ts ON requests(timestamp)')
 
-    def wait_for_slot_gemini_free_tier(self):
+    def wait_for_slot_gemini_free_tier(self, tokens: int):
         """
         Checks if a request can be made.
         - Raises DailyLimitExceededError if daily limit hit.
@@ -70,7 +70,7 @@ class RateLimiter:
                     )
                 else:
                     self.logger.info(
-                        f'Rule #3 OK - daily requests:\t {daily_requests}\t (max: {self.MAX_RPD})')
+                        f'Rule #3 OK - daily requests:\t {daily_requests}\t\t (max: {self.MAX_RPD})')
 
                 # 2. Check Minute Limits (Rule #1 & #2)
                 cursor.execute(
@@ -84,13 +84,15 @@ class RateLimiter:
 
                 # 3. Decision Logic
                 rpm_ok = minute_requests < self.MAX_RPM
-                tpm_ok = minute_tokens < self.MAX_TPM
+                tpm_ok = minute_tokens < (self.MAX_TPM + tokens)
 
                 if rpm_ok and tpm_ok:
                     self.logger.info(
-                        f'Rule #1 OK - minute requests:\t {minute_requests}\t (max: {self.MAX_RPM})')
+                        f'Rule #1 OK - minute requests:\t {minute_requests}\t\t (max: {self.MAX_RPM})')
                     self.logger.info(
-                        f'Rule #2 OK - minute tokens:\t {minute_tokens}\t (max: {self.MAX_TPM})')
+                        f'Rule #2 OK - minute tokens:\t {minute_tokens} (+{tokens})\t\t (max: {self.MAX_TPM})')
+                    
+                    self.log_request(tokens)
                     return True
 
                 # If we are here, we hit a minute limit.
