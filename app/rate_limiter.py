@@ -90,7 +90,7 @@ class RateLimiter:
                     self.logger.info(
                         f'Rule #1 OK - minute requests:\t {minute_requests}\t\t (max: {self.MAX_RPM})')
                     self.logger.info(
-                        f'Rule #2 OK - minute tokens:\t {minute_tokens} (+{tokens})\t\t (max: {self.MAX_TPM})')
+                        f'Rule #2 OK - minute tokens:\t {minute_tokens} (+{tokens})\t (max: {self.MAX_TPM})')
                     
                     self.log_request(tokens)
                     return True

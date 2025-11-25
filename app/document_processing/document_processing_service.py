@@ -14,12 +14,44 @@ from PIL import Image
 
 
 from ..supabase.supabase_service import SupabaseService
+from ..gemini_api.gemini_api_service import GeminiApiService
 
 
 class DocumentProcessingService:
     def __init__(self):
         self.supabase_service = SupabaseService()
+        self.gemini_service = GeminiApiService()
         self.logger = logging.getLogger(__name__)
+
+    def append_image_description(self, md_file_path: Path):
+        if (not md_file_path.exists()):
+            raise FileNotFoundError(f"File not found: {md_file_path}")
+
+        with open(md_file_path, 'r') as f:
+            content = f.read()
+
+        image_tag_pattern = r'!\[.*?\]\((.*?)\)'
+
+        def handle_image_reference(match):
+            image_tag = match.group(0)
+            image_path = Path('temp') / Path(match.group(1))
+
+            image_description = self.gemini_service.generate_image_description(
+                image_path)
+            
+            image_tag_with_description = f'{image_tag}\n<!-- {image_description} -->'
+
+            return image_tag_with_description
+
+        updated_content = re.sub(
+            image_tag_pattern, handle_image_reference, content)
+        
+        with open(md_file_path, 'w') as f:
+            f.write(updated_content)
+
+        self.logger.info(
+            f'Image descriptions have been generated and added to the markdown file.')
+        
 
     def handle_image_references(self, artifacts_folder_path: Path, md_file_path: Path):
         """Updates markdown image links and cleans up redundant image files.

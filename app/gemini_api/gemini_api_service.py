@@ -10,7 +10,7 @@ class GeminiApiService:
 
     def generate_image_description(self, image_path: Path):
         image_file = self.client.files.upload(file=image_path)
-        prompt = 'Generate a brief description of this image'
+        prompt = 'The following image has been extracted from an PDF file. It may be a relevant image that corresponds to part of the document`s content or it may be (less likely) a page decoration or a useless artifact. Please generate a brief description of the image. Only describe what is in the image. DO NOT try to predict what it means or in what context it is inserted.'
 
         contents = [prompt, image_file]
 
