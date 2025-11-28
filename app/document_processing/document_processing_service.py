@@ -227,6 +227,101 @@ class DocumentProcessingService:
 
         return md_path
 
+    def process_pdf_to_markdown_and_upload(self, file_path: str, start_page: int = None, end_page: int = None, bucket: str = 'pdf-files', output_bucket: str = 'processed-files'):
+        """Processes a PDF file from Supabase, converts to markdown, adds image descriptions, and uploads results.
+
+        This method orchestrates the complete document processing pipeline:
+        1. Downloads and converts PDF to Markdown with optional page range
+        2. Handles image references (removes duplicates, converts to relative paths)
+        3. Adds AI-generated descriptions for all images
+        4. Uploads the resulting markdown file to Supabase
+        5. Uploads all artifact images to a dedicated artifacts folder in Supabase
+
+        Args:
+            file_path (str): The file path relative to the root of the S3 bucket (without file extension).
+            start_page (int, optional): The starting page number for conversion (inclusive). Defaults to None.
+            end_page (int, optional): The ending page number for conversion (inclusive). Defaults to None.
+            bucket (str, optional): The name of the source storage bucket. Defaults to 'pdf-files'.
+            output_bucket (str, optional): The name of the destination storage bucket. Defaults to 'processed-files'.
+
+        Returns:
+            dict: A dictionary containing:
+                - 'markdown_path': The path to the uploaded markdown file in Supabase
+                - 'artifacts_path': The path to the uploaded artifacts folder in Supabase
+                - 'status': 'success' or 'error'
+                - 'message': A descriptive message about the operation
+
+        Raises:
+            FileNotFoundError: If the markdown file or artifacts folder is not created properly.
+            Exception: For any errors during file processing or upload operations.
+        """
+        try:
+            md_file_path = self.parse_pdf_to_markdown(
+                file_path, start_page=start_page, end_page=end_page, bucket=bucket
+            )
+            
+            doc_filename = md_file_path.stem
+            artifacts_folder_path = Path("temp") / f"{doc_filename}_artifacts"
+            
+            if artifacts_folder_path.exists():
+                self.logger.info(f'Handling image references for {doc_filename}')
+                self.handle_image_references(artifacts_folder_path, md_file_path)
+            
+            self.logger.info(f'Adding image descriptions for {doc_filename}')
+            self.append_image_description(md_file_path)
+            
+            self.logger.info(f'Uploading markdown file to Supabase')
+            markdown_upload_path = f"{doc_filename}/{doc_filename}.md"
+            with open(md_file_path, 'rb') as f:
+                markdown_content = f.read()
+            
+            self.supabase_service.client.storage.from_(output_bucket).upload(
+                path=markdown_upload_path,
+                file=markdown_content,
+                file_options={"content-type": "text/markdown"}
+            )
+            self.logger.info(f'Markdown file uploaded to {markdown_upload_path}')
+            
+            artifacts_uploaded = False
+            if artifacts_folder_path.exists() and artifacts_folder_path.is_dir():
+                self.logger.info(f'Uploading artifacts for {doc_filename}')
+                artifacts_upload_path = f"{doc_filename}/{doc_filename}_artifacts"
+                
+                for image_file in artifacts_folder_path.iterdir():
+                    if image_file.is_file():
+                        with open(image_file, 'rb') as f:
+                            image_content = f.read()
+                        
+                        upload_path = f"{artifacts_upload_path}/{image_file.name}"
+                        self.supabase_service.client.storage.from_(output_bucket).upload(
+                            path=upload_path,
+                            file=image_content,
+                            file_options={"content-type": "image/png"}
+                        )
+                        self.logger.info(f'Artifact uploaded to {upload_path}')
+                
+                artifacts_uploaded = True
+            
+            self.flush_temp()
+            
+            result = {
+                'status': 'success',
+                'markdown_path': markdown_upload_path,
+                'artifacts_path': f"{doc_filename}/{doc_filename}_artifacts" if artifacts_uploaded else None,
+                'message': f'Successfully processed and uploaded {doc_filename}'
+            }
+            
+            self.logger.info(result['message'])
+            return result
+            
+        except Exception as e:
+            self.logger.error(f'Error during PDF processing and upload: {str(e)}')
+            self.flush_temp()
+            return {
+                'status': 'error',
+                'message': f'Failed to process PDF: {str(e)}'
+            }
+
     def flush_temp(self):
         """
         Deletes all files and subdirectories within a specific folder.

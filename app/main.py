@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from .supabase.supabase_router import router as supabase_router
+from .document_processing.document_processing_router import router as document_processing_router
 
 app = FastAPI(
     title="Modern File Processing API",
@@ -17,3 +18,4 @@ def read_root():
 
 
 app.include_router(supabase_router)
+app.include_router(document_processing_router)
