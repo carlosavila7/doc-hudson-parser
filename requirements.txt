@@ -11,9 +11,8 @@ python-multipart
 supabase  # Official Python client for Supabase
 
 # LLM and File Processing (Placeholders for now)
-# docling (You mentioned this for file processing)
 google-genai
-# deepseek-client (If you use DeepSeek)
+openai
 
 # Environment Management
 python-dotenv
