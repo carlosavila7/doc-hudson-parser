@@ -5,7 +5,7 @@ from openai import OpenAI
 class DeepSeekApiService:
     def __init__(self):
         self.client = OpenAI(
-            api_key=os.getenv('DEEPSEEK_API_KEY'), 
+            api_key=os.getenv('DEEPSEEK_API_KEY'),
             base_url="https://api.deepseek.com"
         )
 
@@ -119,10 +119,10 @@ class DeepSeekApiService:
                 'type': 'json_object'
             }
         )
-        
+
         return response.choices[0].message.content
-    
-    def populate_second_step(self, file_content, identified_exams, exam_index):
+
+    def populate_exam_subtopics(self, file_content, identified_exams, exam_index):
         system_prompt = """
         # Objective
 
@@ -148,7 +148,7 @@ class DeepSeekApiService:
 
         # Output 
 
-        The JSON output must be a single object with the previous entities starting from the `recruitment_offers` and their relations.
+        The JSON output must be a single object array `exam_topics` with the `subtopics` property populated.
 
         ```json
         [
@@ -181,7 +181,6 @@ class DeepSeekApiService:
         {file_content}
         ```
         """
-
         response = self.client.chat.completions.create(
             model="deepseek-chat",
             messages=[
@@ -192,5 +191,83 @@ class DeepSeekApiService:
                 'type': 'json_object'
             }
         )
-        
+
+        return response.choices[0].message.content
+
+    def populate_job_roles(self, file_content, identified_exams, exam_index):
+
+        for index, exam in enumerate(identified_exams):
+            exam.update({'array_index': index})
+
+        system_prompt = """
+        # Objective
+
+        You are tasked with analyzing the provided text content of a PDF document, which details information about public sector recruitment. The document is in Brazilian Portuguese. Your goal is to **extract the detailed subtopic names** for the exam provided in the context, and structure them under their corresponding parent topics.
+
+        **CRITICAL CONSTRAINT:** The ONLY output must be the raw JSON array, starting with `[` and ending with `]`. DO NOT include any markdown formatting (e.g., ```json), commentary, or explanation. All extracted text values must be in the original Brazilian Portuguese.
+
+        # Database entity
+
+        ## `job_roles`
+
+        Represents the job roles given an exam. Those candidates who took an exam have the chance of being nominated for that job. Job roles are related to exams. An exam may have one or many job roles.
+
+        `job_roles` have the following properties.
+
+        - name: The name of the job role
+        - salary: The salary value for the job role
+        - openings: The number of openings for the job role
+
+        ```json
+        name: string,
+        salary: number,
+        openings: number
+        ```
+
+        # Output 
+
+        The JSON output must be a single object array of the previous entity given a certain exam previously identified.
+
+        ```json
+        [
+            {
+                name: string,
+                salary: number,
+                openings: number
+            },
+        ],
+
+        ```
+        """
+
+        user_prompt = f"""
+        # Identified exams
+
+        Here are the exams that have been identified from that same pdf file content. The topics from each exam have also been identified.  
+
+        ```json
+        {identified_exams}
+        ```
+
+        # Instructions
+
+        Extract the job roles for the exam at the array_index {exam_index} from the identified exams array. The output json object should reflect only this exam.
+
+        # File Content
+
+        ```txt
+        {file_content}
+        ```
+        """
+        response = self.client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            response_format={
+                'type': 'json_object'
+            }
+        )
+
         return response.choices[0].message.content
