@@ -202,7 +202,7 @@ class DeepSeekApiService:
         system_prompt = """
         # Objective
 
-        You are tasked with analyzing the provided text content of a PDF document, which details information about public sector recruitment. The document is in Brazilian Portuguese. Your goal is to **extract the detailed subtopic names** for the exam provided in the context, and structure them under their corresponding parent topics.
+        You are tasked with analyzing the provided text content of a PDF document, which details information about public sector recruitment. The document is in Brazilian Portuguese. Your goal is to **extract the job roles** for the exam provided in the context, and structure them under their corresponding properties.
 
         **CRITICAL CONSTRAINT:** The ONLY output must be the raw JSON array, starting with `[` and ending with `]`. DO NOT include any markdown formatting (e.g., ```json), commentary, or explanation. All extracted text values must be in the original Brazilian Portuguese.
 
