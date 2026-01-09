@@ -9,29 +9,11 @@ class ExtractorService:
         self.supabase_service = SupabaseService()
         self.deepseek_service = DeepSeekApiService()
 
-    def extract(self):
+    def populate_base_entities(self, file_bucket, file_path):
         file = self.supabase_service.download_file_from_s3(
-            'processed-files', 'ptc0222/ptc0222.md')
+            file_bucket, file_path)
         file_content = file.decode('utf-8')
 
-        res = self.populate_base_entities(file_content)
-
-        entities = json.loads(res)
-
-        for index, exam in enumerate(entities['exams']):
-            job_roles_res = self.populate_job_roles(
-                file_content, entities['exams'], index)
-            job_roles = json.loads(job_roles_res)
-            exam['job_roles'] = job_roles
-
-            exam_topics_res = self.populate_exam_subtopics(
-                file_content, entities['exams'], index)
-            exam_topics = json.loads(exam_topics_res)
-            exam['exam_topics'] = exam_topics
-
-        print(entities)
-
-    def populate_base_entities(self, file_content):
         system_prompt = """"
         # Objective
 
@@ -234,7 +216,7 @@ class ExtractorService:
 
         # Output 
 
-        The JSON output must be a single object array of the previous entity given a certain exam previously identified.
+        The JSON output must be a single object array of the `job_roles` entity given a certain exam previously identified.
 
         ```json
         [
@@ -244,14 +226,13 @@ class ExtractorService:
                 openings: number
             },
         ],
-
         ```
         """
 
         user_prompt = f"""
         # Identified exams
 
-        Here are the exams that have been identified from that same pdf file content. The topics from each exam have also been identified.  
+        Here are the exams that have been identified from that same PDF file content (the topics from each exam have also been identified):
 
         ```json
         {identified_exams}
@@ -272,3 +253,62 @@ class ExtractorService:
             system_prompt, user_prompt)
 
         return response.choices[0].message.content
+
+    def populate_offices(self, file_content, identified_exams, exam_index):
+
+        for index, exam in enumerate(identified_exams):
+            exam.update({'array_index': index})
+
+        system_prompt = """
+        # Objective
+
+        You are tasked with analyzing the provided text content of a PDF document, which details information about public sector recruitment. The document is in Brazilian Portuguese. Your goal is to **extract the office entity** for the exam provided in the context, and structure them under their corresponding properties.
+
+        **CRITICAL CONSTRAINT:** The ONLY output must be the raw JSON array, starting with `[` and ending with `]`. DO NOT include any markdown formatting (e.g., ```json), commentary, or explanation. All extracted text values must be in the original Brazilian Portuguese.
+
+        # Database entity
+
+        ## `offices`
+
+        Represents the public sector entity that will employ the candidate that took and was approved at the exam. This entities has a relationship with a certain exam, meaning that an exam has one or more offices.
+
+        `offices` have the following properties.
+
+        - name: The name of the public section office (or institution)
+
+        ```json
+        name: string,
+        ```
+
+        # Output 
+
+        The JSON output must be a single object array of the `offices` entity given a certain exam previously identified.
+
+        ```json
+        [
+            {
+                name: string,
+            },
+        ],
+        ```
+        """
+
+        user_prompt = f"""
+        # Identified exams
+
+        Here are the exams that have been identified from that same PDF file content:  
+
+        ```json
+        {identified_exams}
+        ```
+
+        # Instructions
+
+        Extract the offices for the exam at the array_index {exam_index} from the identified exams array. The output json object should reflect only this exam.
+
+        # File Content
+
+        ```txt
+        {file_content}
+        ```
+        """
