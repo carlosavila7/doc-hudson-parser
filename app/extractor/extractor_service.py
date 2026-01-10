@@ -119,7 +119,11 @@ class ExtractorService:
 
         return response.choices[0].message.content
 
-    def populate_exam_subtopics(self, file_content, identified_exams, exam_index):
+    def populate_exam_subtopics(self, file_content, identified_exams, exam_id):
+        for index, exam in enumerate(identified_exams):
+            if exam.get("id") is None:
+                exam.update({'id': index})
+
         system_prompt = """
         # Objective
 
@@ -170,7 +174,7 @@ class ExtractorService:
 
         # Instructions
 
-        Extract the subtopics for the exam at the index {exam_index} from the identified exams array. The output json object should reflect only this exam.
+        Extract the subtopics for the exam with the following id: `{exam_id}`. The output json object should reflect only this exam.
 
         # File Content
 
@@ -184,10 +188,10 @@ class ExtractorService:
 
         return response.choices[0].message.content
 
-    def populate_job_roles(self, file_content, identified_exams, exam_index):
-
+    def populate_job_roles(self, file_content, identified_exams, exam_id):
         for index, exam in enumerate(identified_exams):
-            exam.update({'array_index': index})
+            if exam.get("id") is None:
+                exam.update({'id': index})
 
         system_prompt = """
         # Objective
@@ -240,7 +244,7 @@ class ExtractorService:
 
         # Instructions
 
-        Extract the job roles for the exam at the array_index {exam_index} from the identified exams array. The output json object should reflect only this exam.
+        Extract the job roles for the exam with the following id: `{exam_id}`. The output json object should reflect only this exam.
 
         # File Content
 
@@ -254,10 +258,10 @@ class ExtractorService:
 
         return response.choices[0].message.content
 
-    def populate_offices(self, file_content, identified_exams, exam_index):
-
+    def populate_offices(self, file_content, identified_exams, exam_id):
         for index, exam in enumerate(identified_exams):
-            exam.update({'array_index': index})
+            if exam.get("id") is None:
+                exam.update({'id': index})
 
         system_prompt = """
         # Objective
@@ -304,7 +308,7 @@ class ExtractorService:
 
         # Instructions
 
-        Extract the offices for the exam at the array_index {exam_index} from the identified exams array. The output json object should reflect only this exam.
+        Extract the offices for the exam with the following id: `{exam_id}`. The output json object should reflect only this exam.
 
         # File Content
 
@@ -312,3 +316,8 @@ class ExtractorService:
         {file_content}
         ```
         """
+
+        response = self.deepseek_service.chat_completion(
+            system_prompt, user_prompt)
+
+        return response.choices[0].message.content
