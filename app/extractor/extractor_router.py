@@ -20,7 +20,7 @@ def get_base_entities(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/exam-subtopics/{exam_index}")
+@router.get("/exam-subtopics/{exam_id}")
 def get_exam_subtopics(
     exam_id: str,
     file_bucket: str = Query(..., description="The S3 bucket name"),
@@ -39,7 +39,7 @@ def get_exam_subtopics(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/job-roles/{exam_index}")
+@router.get("/job-roles/{exam_id}")
 def get_job_roles(
     exam_id: str,
     file_bucket: str = Query(..., description="The S3 bucket name"),
@@ -58,7 +58,7 @@ def get_job_roles(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/offices/{exam_index}")
+@router.get("/offices/{exam_id}")
 def get_offices(
     exam_id: str,
     file_bucket: str = Query(..., description="The S3 bucket name"),
