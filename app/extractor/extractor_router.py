@@ -22,7 +22,7 @@ def get_base_entities(
 
 @router.get("/exam-subtopics/{exam_index}")
 def get_exam_subtopics(
-    exam_index: int,
+    exam_id: str,
     file_bucket: str = Query(..., description="The S3 bucket name"),
     file_key: str = Query(..., description="The S3 file key"),
     identified_exams: str = Query(..., description="JSON string of identified exams")
@@ -34,14 +34,14 @@ def get_exam_subtopics(
         file = extractor_service.supabase_service.download_file_from_s3(file_bucket, file_key)
         file_content = file.decode('utf-8')
         identified_exams_parsed = json.loads(identified_exams)
-        result = extractor_service.populate_exam_subtopics(file_content, identified_exams_parsed, exam_index)
+        result = extractor_service.populate_exam_subtopics(file_content, identified_exams_parsed, exam_id)
         return json.loads(result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/job-roles/{exam_index}")
 def get_job_roles(
-    exam_index: int,
+    exam_id: str,
     file_bucket: str = Query(..., description="The S3 bucket name"),
     file_key: str = Query(..., description="The S3 file key"),
     identified_exams: str = Query(..., description="JSON string of identified exams")
@@ -53,14 +53,14 @@ def get_job_roles(
         file = extractor_service.supabase_service.download_file_from_s3(file_bucket, file_key)
         file_content = file.decode('utf-8')
         identified_exams_parsed = json.loads(identified_exams)
-        result = extractor_service.populate_job_roles(file_content, identified_exams_parsed, exam_index)
+        result = extractor_service.populate_job_roles(file_content, identified_exams_parsed, exam_id)
         return json.loads(result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/offices/{exam_index}")
 def get_offices(
-    exam_index: int,
+    exam_id: str,
     file_bucket: str = Query(..., description="The S3 bucket name"),
     file_key: str = Query(..., description="The S3 file key"),
     identified_exams: str = Query(..., description="JSON string of identified exams")
@@ -72,7 +72,7 @@ def get_offices(
         file = extractor_service.supabase_service.download_file_from_s3(file_bucket, file_key)
         file_content = file.decode('utf-8')
         identified_exams_parsed = json.loads(identified_exams)
-        result = extractor_service.populate_offices(file_content, identified_exams_parsed, exam_index)
+        result = extractor_service.populate_offices(file_content, identified_exams_parsed, exam_id)
         return json.loads(result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
