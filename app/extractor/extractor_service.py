@@ -38,11 +38,11 @@ class ExtractorService:
 
         ## `exams`
 
-        Represents every written test (or exam) that must be taken during this process. Any test other than written must not be mapped - as physical or psychological evaluations. Is expected that a recruitment offer has at least one exam, however it might have many exams that evaluate different candidates for different job roles.
+        Represents every written test (or exam) that must be taken during this process. Any test other than written with multiple alternatives choices and true or false questions must not be mapped - as physical or psychological evaluations. DO NOT include writing tests, essays or physical proficiency tests. Is expected that a recruitment offer has at least one exam, however it might have many exams that evaluate different candidates for different job roles.
 
         An exam has the following properties:
 
-        - name: Based on the context, give it a name so it can be identified.
+        - name: Based on the context, give it a name so it can be identified. MUST be unique for each exam. May reference a job role, educational level or other related information.
         - education_level: BASIC for when the requirement is only `Ensino Fundamental`, MEDIUM for when the requirement is the `Ensino Médio`and SUPERIOR when some graduation IS required.
         - exam_topics: an array of the entity [`exam_topics`](#exam_topics)
 
@@ -120,9 +120,7 @@ class ExtractorService:
         return response.choices[0].message.content
 
     def populate_exam_subtopics(self, file_content, identified_exams, exam_id):
-        for index, exam in enumerate(identified_exams):
-            if exam.get("id") is None:
-                exam.update({'id': index})
+        exam = next((d for d in identified_exams if d.get('id') == exam_id), None)
 
         system_prompt = """
         # Objective
@@ -174,7 +172,7 @@ class ExtractorService:
 
         # Instructions
 
-        Extract the subtopics for the exam with the following id: `{exam_id}`. The output json object should reflect only this exam.
+        Extract the subtopics for the exam with the following id: `{exam["name"]}`. The output json object should reflect only this exam.
 
         # File Content
 
@@ -189,9 +187,7 @@ class ExtractorService:
         return response.choices[0].message.content
 
     def populate_job_roles(self, file_content, identified_exams, exam_id):
-        for index, exam in enumerate(identified_exams):
-            if exam.get("id") is None:
-                exam.update({'id': index})
+        exam = next((d for d in identified_exams if d.get('id') == exam_id), None)
 
         system_prompt = """
         # Objective
@@ -211,16 +207,18 @@ class ExtractorService:
         - name: The name of the job role
         - salary: The salary value for the job role
         - openings: The number of openings for the job role
+        - verification_exam_name: Why does this role belong to the requested ID?
 
         ```json
         name: string,
         salary: number,
-        openings: number
+        openings: number,
+        verification_exam_name: string
         ```
 
         # Output 
 
-        The JSON output must be a single object array of the `job_roles` entity given a certain exam previously identified.
+        The JSON output must be a single object array of the `job_roles` entity given a certain exam previously identified. ONLY return job roles related to the exam which id have been passed. Job roles related to other identified exams must not be in the output result.
 
         ```json
         [
@@ -244,7 +242,7 @@ class ExtractorService:
 
         # Instructions
 
-        Extract the job roles for the exam with the following id: `{exam_id}`. The output json object should reflect only this exam.
+        Extract the job roles for the exam with the following name: `{exam["name"]}`. The output json object should reflect only this exam. All job roles related to other exams must be ignored
 
         # File Content
 
@@ -259,9 +257,7 @@ class ExtractorService:
         return response.choices[0].message.content
 
     def populate_offices(self, file_content, identified_exams, exam_id):
-        for index, exam in enumerate(identified_exams):
-            if exam.get("id") is None:
-                exam.update({'id': index})
+        exam = next((d for d in identified_exams if d.get('id') == exam_id), None)
 
         system_prompt = """
         # Objective
@@ -308,7 +304,7 @@ class ExtractorService:
 
         # Instructions
 
-        Extract the offices for the exam with the following id: `{exam_id}`. The output json object should reflect only this exam.
+        Extract the offices for the exam with the following id: `{exam["name"]}`. The output json object should reflect only this exam.
 
         # File Content
 
