@@ -1,14 +1,14 @@
 name: document-pipeline
 
 services:
-  doc-hudson-parser:
+  python-api:
     build: 
-      context: .
+      context: ./python-api
       dockerfile: Dockerfile
-    container_name: doc-hudson-parser
+    container_name: python-api
     restart: always
     env_file:
-      - .env
+      - ./python-api/.env
     ports:
       - "8000:8000"
     networks:
@@ -30,7 +30,17 @@ services:
     networks:
       - automation-network
     depends_on:
-      - doc-hudson-parser
+      - python-api
+
+  front-end:
+    build: ./front-end
+    ports:
+      - "8501:8501"
+    depends_on:
+      - python-api
+      - n8n
+    networks:
+      - automation-network
 
 networks:
   automation-network:
