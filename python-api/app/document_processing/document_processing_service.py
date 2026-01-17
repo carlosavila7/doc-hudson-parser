@@ -9,9 +9,9 @@ from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.datamodel.base_models import InputFormat, DocumentStream
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling_core.types.doc import ImageRefMode
+from collections import Counter
 from pathlib import Path
 from PIL import Image
-
 
 from ..supabase.supabase_service import SupabaseService
 from ..gemini_api.gemini_api_service import GeminiApiService
@@ -260,7 +260,8 @@ class DocumentProcessingService:
                 file_path, start_page=start_page, end_page=end_page, bucket=bucket
             )
             
-            doc_filename = md_file_path.stem
+            pdf_path = Path(file_path)
+            doc_filename = f"{pdf_path.parent.name[:-1]}_{md_file_path.stem}"
             artifacts_folder_path = Path("temp") / f"{doc_filename}_artifacts"
             
             if artifacts_folder_path.exists():
@@ -346,3 +347,17 @@ class DocumentProcessingService:
                 self.logger.error(f"Failed to delete {item_path}. Reason: {e}")
 
         self.logger.info(f'{folder_path} folder has been flushed')
+
+    
+    def get_markdown_headers(self, bucket: str, path: str):
+        file = self.supabase_service.download_file_from_s3(bucket, path)
+        file_content = file.decode()
+
+        header_pattern = r'^(#{1,6}\s+.+)$'
+        all_headers = re.findall(header_pattern, file_content, re.MULTILINE)
+
+        counts = Counter(all_headers)
+
+        unique_headers = [h for h in all_headers if counts[h] == 1]
+
+        return unique_headers
