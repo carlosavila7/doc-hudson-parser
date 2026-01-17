@@ -25,12 +25,14 @@ async def get_bucket_list(
 
 @router.get("/{bucket}")
 async def get_files_by_bucket(
-    bucket: str
+    bucket: str,
+    path: str = None,
+    search: str = None
 ):
     """Endpoint to retrieve a file from Supabase S3."""
     service: SupabaseService = get_storage_service()
 
-    return service.get_files_from_bucket(bucket)
+    return service.get_files_from_bucket(bucket, path, search)
 
 @router.get("/download-file/{bucket}")
 def download_file(
@@ -59,3 +61,14 @@ async def upload_file(
     service: SupabaseService = get_storage_service()
 
     return await service.upload_file_to_s3(bucket, path, file)
+
+@router.get("/signed-url/{bucket}")
+async def get_signed_url(
+    bucket: str,
+    path: str,
+    expires_in: int = 60
+):
+    """Endpoint to retrieve a signed URL for a file in Supabase S3."""
+    service: SupabaseService = get_storage_service()
+
+    return service.create_signed_url(bucket, path, expires_in)

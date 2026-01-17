@@ -12,7 +12,6 @@ class SupabaseService:
         res = self.client.storage.from_(bucket_name).download(file_path)
         return res
 
-
     # 2. Post data to PostgreSQL
     # def insert_data_to_postgres(self, table_name: str, data: List[Dict[str, Any]]):
     #     """Inserts processed data into a PostgreSQL table."""
@@ -42,6 +41,15 @@ class SupabaseService:
         res = self.client.storage.list_buckets()
         return res
 
-    def get_files_from_bucket(self, bucket: str):
-        res = self.client.storage.from_(bucket).list()
+    def get_files_from_bucket(self, bucket: str, path: str = None, search: str = None):
+        res = self.client.storage.from_(
+            bucket).list(path, {"search": search})
+        return res
+
+    def create_signed_url(self, bucket: str, path: str, expires_in: int = 3600):
+        """Creates a signed URL for a file in Supabase Storage."""
+        res = self.client.storage.from_(bucket).create_signed_url(
+            path,
+            expires_in
+        )
         return res
