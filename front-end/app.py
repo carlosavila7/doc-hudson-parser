@@ -1,33 +1,122 @@
+from pathlib import Path
+
 import streamlit as st
 import requests
 
-st.set_page_config(page_title="n8n Pipeline Trigger", page_icon="🚀")
+st.set_page_config(page_title="n8n Pipeline Trigger",
+                   page_icon="🚀", layout="wide")
 
 st.title("n8n Workflow Trigger")
-st.markdown("Enter the API endpoint or n8n Webhook address below to start the process.")
 
-with st.form("api_trigger_form"):
-    target_url = st.text_input(
-        "Target Address", 
-        placeholder="http://n8n:5678/webhook/your-id",
-        help="Enter the full internal or external URL for the GET request."
-    )
-    
-    submit_button = st.form_submit_button("Run Pipeline")
+col1, col2 = st.columns([2, 3])
 
-if submit_button:
-    if target_url:
+with col1:
+    with st.expander("Select file"):
+        response = requests.get(
+            "http://python-api:8000/supabase/pdf-files", params={"path": "tenders"})
+
+        options = tuple(d.get("name", None) for d in response.json())
+
+        pdf_name = st.selectbox(
+            "Select the .pdf file to work with",
+            options,
+            index=None,
+        )
+
+        md_path = ""
+
+        if pdf_name:
+            pdf_path = Path(f"tenders/{pdf_name}")
+            prefix = pdf_path.parent.name[:-1]
+            md_path = f'{prefix}_{pdf_path.stem}/{prefix}_{pdf_path.stem}.md'
+
+            md_file_res = requests.get(
+                "http://python-api:8000/supabase/processed-files", params={"path": f'{prefix}_{pdf_path.stem}/'})
+
+            if md_file_res.status_code == 200 and len(md_file_res.json()) > 0:
+                st.success(f'`{md_path}` OK')
+            else:
+                st.warning(f'`{md_path}` not found')
+
+        download_btn = st.button("Download", width="stretch", type="primary")
+
+        if download_btn:
+            st.session_state.selected_pdf = pdf_name
+            st.session_state.show_pdf = True
+
+    with st.expander("Pipeline params"):
+        tender_url = st.text_input(
+            "Tender URL", placeholder="https://banca.com.br/concurso")
+
+        st.text("Select the document section for each extraction")
+
+        base_entities_tab, exam_subtopics_tab, job_roles_tab = st.tabs(
+            ["Base entities", "Exam subtopics", "Job roles"])
+
+        base_entities_sections = []
+        exam_subtopics_sections = []
+        job_roles_sections = []
+
+        headers_res = requests.get('http://python-api:8000/document-processing/file-headers',
+                                   params={"bucket": "processed-files", "file_path": md_path})
+
+        with base_entities_tab:
+            if headers_res:
+                headers = headers_res.json()
+
+                for i, header in enumerate(headers):
+                    is_selected = st.checkbox(
+                        f"`{header}`", key=f"base_entities_{i}")
+                    base_entities_sections.append(
+                        {"header": header, "selected": is_selected})
+        with exam_subtopics_tab:
+            if headers_res:
+                headers = headers_res.json()
+
+                for i, header in enumerate(headers):
+                    is_selected = st.checkbox(
+                        f"`{header}`", key=f"exam_subtopics_{i}")
+                    exam_subtopics_sections.append(
+                        {"header": header, "selected": is_selected})
+        with job_roles_tab:
+            if headers_res:
+                headers = headers_res.json()
+
+                for i, header in enumerate(headers):
+                    is_selected = st.checkbox(
+                        f"`{header}`", key=f"job_roles_{i}")
+                    job_roles_sections.append(
+                        {"header": header, "selected": is_selected})
+
+        start_pipeline = st.button(
+            "Start pipeline", width="stretch", type="primary")
+
+if start_pipeline:
+    pipeline_trigger = requests.post("http://n8n:5678/webhook-test/754b5961-2b27-426b-822e-8c7d29c3c989",
+                                    json={"file_path": md_path, "tender_url": tender_url, "base_entities_sections": base_entities_sections, "exam_subtopics_sections": exam_subtopics_sections, "job_roles_sections": job_roles_sections})
+
+    if pipeline_trigger.status_code == 200:
+        st.toast("Sucess - workflow started")
+    else: 
+        st.toast("Failed to strat workflow")
+
+if download_btn:
+    if pdf_name:
         try:
-            with st.spinner(f"Sending GET request to {target_url}..."):
-                response = requests.get(target_url, timeout=10)
-                
-                if response.status_code == 200:
-                    st.success("Success! Pipeline triggered.")
-                    st.json(response.json())
-                else:
-                    st.error(f"Error: Server returned status code {response.status_code}")
-                    st.write(response.text)
+            with col2:
+                with st.spinner(f"Fetching .pdf..."):
+                    signed_url_res = requests.get(
+                        "http://python-api:8000/supabase/signed-url/pdf-files?", params={"path": f"tenders/{pdf_name}"})
+
+                    if signed_url_res.status_code == 200:
+                        st.toast("Success - File URL downloaded")
+                        signed_url = signed_url_res.json().get("signedURL", None)
+
+                        st.pdf(signed_url, height=800)
+                    else:
+                        st.error(
+                            f"Error: Server returned status code {signed_url_res.status_code}")
         except requests.exceptions.RequestException as e:
             st.error(f"Failed to connect: {e}")
     else:
-        st.warning("Please enter a valid address before clicking submit.")
+        st.warning("Please selects a pdf file before clicking submit.")
