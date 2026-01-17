@@ -1,5 +1,3 @@
-import json
-
 from app.supabase.supabase_service import SupabaseService
 from app.deepseek_api.deepseek_api_service import DeepSeekApiService
 
@@ -9,10 +7,15 @@ class ExtractorService:
         self.supabase_service = SupabaseService()
         self.deepseek_service = DeepSeekApiService()
 
-    def populate_base_entities(self, file_bucket, file_path):
+    def populate_base_entities(self, file_bucket: str, file_path: str, header_filter: list = None):
         file = self.supabase_service.download_file_from_s3(
             file_bucket, file_path)
+
         file_content = file.decode('utf-8')
+
+        if header_filter is not None:
+            file_content = self.slice_content_by_headers(
+                file_content, header_filter)
 
         system_prompt = """"
         # Objective
@@ -119,8 +122,18 @@ class ExtractorService:
 
         return response.choices[0].message.content
 
-    def populate_exam_subtopics(self, file_content, identified_exams, exam_id):
-        exam = next((d for d in identified_exams if d.get('id') == exam_id), None)
+    def populate_exam_subtopics(self, file_bucket: str, file_path: str, identified_exams: list, exam_id: str, header_filter: list = None):
+        file = self.supabase_service.download_file_from_s3(
+            file_bucket, file_path)
+
+        file_content = file.decode('utf-8')
+
+        if header_filter is not None:
+            file_content = self.slice_content_by_headers(
+                file_content, header_filter)
+
+        exam = next(
+            (d for d in identified_exams if d.get('id') == exam_id), None)
 
         system_prompt = """
         # Objective
@@ -186,8 +199,18 @@ class ExtractorService:
 
         return response.choices[0].message.content
 
-    def populate_job_roles(self, file_content, identified_exams, exam_id):
-        exam = next((d for d in identified_exams if d.get('id') == exam_id), None)
+    def populate_job_roles(self, file_bucket: str, file_path: str, identified_exams: list, exam_id: str, header_filter: list = None):
+        file = self.supabase_service.download_file_from_s3(
+            file_bucket, file_path)
+
+        file_content = file.decode('utf-8')
+
+        if header_filter is not None:
+            file_content = self.slice_content_by_headers(
+                file_content, header_filter)
+
+        exam = next(
+            (d for d in identified_exams if d.get('id') == exam_id), None)
 
         system_prompt = """
         # Objective
@@ -256,8 +279,18 @@ class ExtractorService:
 
         return response.choices[0].message.content
 
-    def populate_offices(self, file_content, identified_exams, exam_id):
-        exam = next((d for d in identified_exams if d.get('id') == exam_id), None)
+    def populate_offices(self, file_bucket: str, file_path: str, identified_exams: list, exam_id: str, header_filter: list = None):
+        file = self.supabase_service.download_file_from_s3(
+            file_bucket, file_path)
+
+        file_content = file.decode('utf-8')
+
+        if header_filter is not None:
+            file_content = self.slice_content_by_headers(
+                file_content, header_filter)
+            
+        exam = next(
+            (d for d in identified_exams if d.get('id') == exam_id), None)
 
         system_prompt = """
         # Objective
@@ -317,3 +350,34 @@ class ExtractorService:
             system_prompt, user_prompt)
 
         return response.choices[0].message.content
+
+    def slice_content_by_headers(self, content: str, headers: list) -> str:
+        """
+        Slices content from a 'selected: True' header up to the 
+        start of the next 'selected: False' header.
+        """
+        sliced_parts = []
+
+        for i, item in enumerate(headers):
+            if item.get("selected") is True:
+                header_text = item.get("header")
+
+                start_index = content.find(header_text)
+
+                if start_index == -1:
+                    continue
+
+                end_index = len(content)
+
+                for next_item in headers[i + 1:]:
+                    if next_item.get("selected") is False:
+                        next_header_text = next_item.get("header")
+                        find_next = content.find(
+                            next_header_text, start_index + len(header_text))
+                        if find_next != -1:
+                            end_index = find_next
+                            break
+
+                sliced_parts.append(content[start_index:end_index].strip())
+
+        return "\n\n".join(sliced_parts)
