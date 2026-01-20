@@ -7,7 +7,7 @@ class ExtractorService:
         self.supabase_service = SupabaseService()
         self.deepseek_service = DeepSeekApiService()
 
-    def populate_base_entities(self, file_bucket: str, file_path: str, header_filter: list = None):
+    def populate_base_entities(self, file_bucket: str, file_path: str, header_filter: list = None, model: str = "deepseek-chat"):
         file = self.supabase_service.download_file_from_s3(
             file_bucket, file_path)
 
@@ -118,11 +118,11 @@ class ExtractorService:
         """
 
         response = self.deepseek_service.chat_completion(
-            system_prompt, user_prompt)
+            system_prompt, user_prompt, model=model)
 
         return response.choices[0].message.content
 
-    def populate_exam_subtopics(self, file_bucket: str, file_path: str, identified_exams: list, exam_id: str, header_filter: list = None):
+    def populate_exam_subtopics(self, file_bucket: str, file_path: str, identified_exams: list, exam_id: str, header_filter: list = None, model: str = "deepseek-chat"):
         file = self.supabase_service.download_file_from_s3(
             file_bucket, file_path)
 
@@ -195,11 +195,11 @@ class ExtractorService:
         """
 
         response = self.deepseek_service.chat_completion(
-            system_prompt, user_prompt)
+            system_prompt, user_prompt, model=model)
 
         return response.choices[0].message.content
 
-    def populate_job_roles(self, file_bucket: str, file_path: str, identified_exams: list, exam_id: str, header_filter: list = None):
+    def populate_job_roles(self, file_bucket: str, file_path: str, identified_exams: list, exam_id: str, header_filter: list = None, model: str = "deepseek-chat"):
         file = self.supabase_service.download_file_from_s3(
             file_bucket, file_path)
 
@@ -229,13 +229,15 @@ class ExtractorService:
 
         - name: The name of the job role
         - salary: The salary value for the job role
-        - openings: The number of openings for the job role
+        - openings: The number of openings for the job role. All direct openings ("ampla concorrência" and "vagas reservadas")
+        - cr_openings: The number of CR ("Cadastro Reserva") openings for the job role
         - verification_exam_name: Why does this role belong to the requested ID?
 
         ```json
         name: string,
         salary: number,
         openings: number,
+        cr_openings: number,
         verification_exam_name: string
         ```
 
@@ -248,7 +250,8 @@ class ExtractorService:
             {
                 name: string,
                 salary: number,
-                openings: number
+                openings: number,
+                cr_openings: number
             },
         ],
         ```
@@ -275,11 +278,11 @@ class ExtractorService:
         """
 
         response = self.deepseek_service.chat_completion(
-            system_prompt, user_prompt)
+            system_prompt, user_prompt, model=model)
 
         return response.choices[0].message.content
 
-    def populate_offices(self, file_bucket: str, file_path: str, identified_exams: list, exam_id: str, header_filter: list = None):
+    def populate_offices(self, file_bucket: str, file_path: str, identified_exams: list, exam_id: str, header_filter: list = None, model: str = "deepseek-chat"):
         file = self.supabase_service.download_file_from_s3(
             file_bucket, file_path)
 
@@ -347,7 +350,7 @@ class ExtractorService:
         """
 
         response = self.deepseek_service.chat_completion(
-            system_prompt, user_prompt)
+            system_prompt, user_prompt, model=model)
 
         return response.choices[0].message.content
 
