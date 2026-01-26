@@ -1,5 +1,5 @@
 from typing import List, Dict, Any
-from fastapi import UploadFile
+from fastapi import UploadFile, HTTPException
 from ..dependencies import get_supabase_client
 
 
@@ -11,14 +11,6 @@ class SupabaseService:
         """Downloads a file from Supabase Storage (S3)."""
         res = self.client.storage.from_(bucket_name).download(file_path)
         return res
-
-    # 2. Post data to PostgreSQL
-    # def insert_data_to_postgres(self, table_name: str, data: List[Dict[str, Any]]):
-    #     """Inserts processed data into a PostgreSQL table."""
-    #     # Using the postgrest client accessible via .table()
-    #     res = self.client.table(table_name).insert(data).execute()
-    #     # res.data will contain the inserted row data on success
-    #     return res.data
 
     async def upload_file_to_s3(self, bucket: str, path: str, upload_file: UploadFile):
         content = await upload_file.read()
@@ -53,3 +45,57 @@ class SupabaseService:
             expires_in
         )
         return res
+
+    def get_recruitment_offer(self, offer_id: str):
+        response = self.client.table("recruitment_offers").select(
+            "*").eq("id", offer_id).single().execute()
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Offer not found")
+        return response.data
+
+    def get_exams(self, recruitment_offer_id: str):
+        response = self.client.table("exams").select(
+            "*").eq("recruitment_offer_id", recruitment_offer_id).execute()
+        return response.data
+
+    def get_topics(self, exam_id: str):
+        # This joins exam_topics with topics to get the actual topic data
+        response = self.client.table("exam_topics") \
+            .select("topic_id, topics(id, name, created_at)") \
+            .eq("exam_id", exam_id) \
+            .execute()
+        # Flatten the response to return a list of topics
+        return [item['topics'] for item in response.data if item.get('topics')]
+
+    def get_subtopics(self, exam_id: str, topic_id: str):
+        exam_topic = self.client.table("exam_topics") \
+            .select("id") \
+            .eq("exam_id", exam_id) \
+            .eq("topic_id", topic_id) \
+            .single() \
+            .execute()
+
+        exam_topic_id = exam_topic.data['id']
+
+        if not exam_topic_id:
+            return []
+
+        response = self.client.table("exam_subtopics") \
+            .select("*, topics!inner(*)") \
+            .eq("exam_topic_id", exam_topic_id) \
+            .execute()
+
+        return [{**item.pop("topics")} for item in response.data]
+
+    def get_offices(self, exam_id: str):
+        # Joining exam_offices with the offices table
+        response = self.client.table("exam_offices") \
+            .select("office_id, offices(id, name, created_at)") \
+            .eq("exam_id", exam_id) \
+            .execute()
+        return [item['offices'] for item in response.data if item.get('offices')]
+
+    def get_job_roles(self, exam_id: str):
+        response = self.client.table("job_roles").select(
+            "*").eq("exam_id", exam_id).execute()
+        return response.data
