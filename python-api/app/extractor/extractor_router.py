@@ -12,7 +12,8 @@ def get_base_entities(
     file_bucket: str = Query(..., description="The S3 bucket name"),
     file_path: str = Query(..., description="The S3 file path"),
     header_filter: str = Query(None,
-                               description="Header filters which contains relevant data")
+                               description="Header filters which contains relevant data"),
+    model: str = Query("deepseek-chat", description="The model to use for extraction")
 ):
     """
     Extract base entities from the document.
@@ -22,7 +23,7 @@ def get_base_entities(
 
     try:
         result = extractor_service.populate_base_entities(
-            file_bucket, file_path, header_filter)
+            file_bucket, file_path, header_filter, model)
         return json.loads(result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -36,7 +37,8 @@ def get_exam_subtopics(
     identified_exams: str = Query(...,
                                   description="JSON string of identified exams"),
     header_filter: str = Query(None,
-                               description="Header filters which contains relevant data")
+                               description="Header filters which contains relevant data"),
+    model: str = Query("deepseek-chat", description="The model to use for extraction")
 ):
     """
     Extract exam subtopics for a specific exam index.
@@ -47,7 +49,7 @@ def get_exam_subtopics(
     try:
         identified_exams_parsed = json.loads(identified_exams)
         result = extractor_service.populate_exam_subtopics(
-            file_bucket, file_key, identified_exams_parsed, exam_id, header_filter)
+            file_bucket, file_key, identified_exams_parsed, exam_id, header_filter, model)
         return json.loads(result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -61,7 +63,8 @@ def get_job_roles(
     identified_exams: str = Query(...,
                                   description="JSON string of identified exams"),
     header_filter: str = Query(None,
-                               description="Header filters which contains relevant data")
+                               description="Header filters which contains relevant data"),
+    model: str = Query("deepseek-chat", description="The model to use for extraction")
 ):
     """
     Extract job roles for a specific exam index.
@@ -72,7 +75,7 @@ def get_job_roles(
     try:
         identified_exams_parsed = json.loads(identified_exams)
         result = extractor_service.populate_job_roles(
-            file_bucket, file_key, identified_exams_parsed, exam_id, header_filter)
+            file_bucket, file_key, identified_exams_parsed, exam_id, header_filter, model)
         return json.loads(result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -86,7 +89,8 @@ def get_offices(
     identified_exams: str = Query(...,
                                   description="JSON string of identified exams"),
     header_filter: str = Query(None,
-                               description="Header filters which contains relevant data")
+                               description="Header filters which contains relevant data"),
+    model: str = Query("deepseek-chat", description="The model to use for extraction")
 ):
     """
     Extract offices for a specific exam index.
@@ -97,7 +101,7 @@ def get_offices(
     try:
         identified_exams_parsed = json.loads(identified_exams)
         result = extractor_service.populate_offices(
-            file_bucket, file_key, identified_exams_parsed, exam_id, header_filter)
+            file_bucket, file_key, identified_exams_parsed, exam_id, header_filter, model)
         return json.loads(result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
