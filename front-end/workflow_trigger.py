@@ -17,7 +17,7 @@ col1, col2 = st.columns([2, 3])
 with col1:
     with st.expander("Select file"):
         response = requests.get(
-            "http://python-api:8000/supabase/pdf-files", params={"path": "tenders"})
+            "http://python-api:8000/supabase/storage/pdf-files", params={"path": "tenders"})
 
         options = tuple(d.get("name", None) for d in response.json())
 
@@ -35,7 +35,7 @@ with col1:
             md_path = f'{prefix}_{pdf_path.stem}/{prefix}_{pdf_path.stem}.md'
 
             md_file_res = requests.get(
-                "http://python-api:8000/supabase/processed-files", params={"path": f'{prefix}_{pdf_path.stem}/'})
+                "http://python-api:8000/supabase/storage/processed-files", params={"path": f'{prefix}_{pdf_path.stem}/'})
 
             if md_file_res.status_code == 200 and len(md_file_res.json()) > 0:
                 st.success(f'`{md_path}` OK')
@@ -48,7 +48,7 @@ with col1:
             if pdf_name:
                 try:
                     signed_url_res = requests.get(
-                        "http://python-api:8000/supabase/signed-url/pdf-files?",
+                        "http://python-api:8000/supabase/storage/signed-url/pdf-files?",
                         params={"path": f"tenders/{pdf_name}"}
                     )
                     if signed_url_res.status_code == 200:
@@ -132,7 +132,9 @@ if start_pipeline:
                                     json={"file_path": md_path, "tender_url": tender_url, "base_entities_sections": base_entities_sections, "exam_subtopics_sections": exam_subtopics_sections, "job_roles_sections": job_roles_sections, "offices_sections": offices_sections})
 
     if pipeline_trigger.status_code == 200:
-        st.json(pipeline_trigger.json())
+        st.session_state.offer_id = pipeline_trigger.json().get("id")
+        st.switch_page("workflow_results.py")
+
         st.toast("Sucess - workflow started")
     else:
         st.toast("Failed to strat workflow")
