@@ -137,61 +137,42 @@ class ExtractorService:
 
         system_prompt = """
         # Objective
+        You are an expert at parsing "Conteúdo Programático" from Brazilian public exams.
+        Your goal is to map specific subtopics to their parent macro-topics.
 
-        You are tasked with analyzing the provided text content of a PDF document, which details information about public sector recruitment. The document is in Brazilian Portuguese. Your goal is to **extract the detailed subtopic names** for the exam provided in the context, and structure them under their corresponding parent topics.
+        # Extraction Rules
+        1. SCOPE: Only process the exam with the specific ID/Name provided.
+        2. SUBTOPIC GRANULARITY: 
+        - Extract distinct subjects (e.g., "Crase", "Regência").
+        - DO NOT extract long descriptions, law articles (e.g., "Art. 1º ao 5º"), or administrative observations.
+        - Clean the text: Remove leading dashes, dots, or numbers (e.g., "1.1. Crase" -> "Crase").
+        3. HIERARCHY: If the text says "Matemática: Álgebra, Geometria", then "Matemática" is the Name and the others are Subtopics.
 
-        **CRITICAL CONSTRAINT:** The ONLY output must be the raw JSON array, starting with `[` and ending with `]`. DO NOT include any markdown formatting (e.g., ```json), commentary, or explanation. All extracted text values must be in the original Brazilian Portuguese.
+        # Schema (exam_topics)
+        - name: The macro area/subject (e.g., "Direito Administrativo")
+        - subtopics: Array of strings representing the granular items to be studied.
 
-        # Database entity
-
-        ## `exam_topics`
-
-        Represents the topics contained in an exam. A student that wants to prepare for it, would look the topics to study them. Extract only the main subject headings or macro areas. Do not include detailed subtopics, specific articles of law, or paragraphs.
-
-        `subtopics` must be an array of string property inside each topic. Represents the sub topics contained in an exam topic.
-
-        - name: The name of the exam topic
-        - subtopics: An array of strings where each is a subtopic inside that topic
-
-        ```json
-        name: string,
-        subtopics: string[]
-        ```
-
-        # Output 
-
-        The JSON output must be a single object array `exam_topics` with the `subtopics` property populated.
-
-        ```json
-        [
-            {
-                name: string,
-                subtopics: string[]
-            },
-        ],
-
-        ```
-
+        # Constraint
+        OUTPUT ONLY THE RAW JSON ARRAY. NO MARKDOWN. NO PREAMBLE.
         """
 
         user_prompt = f"""
-        # Identified exams
-
-        Here are the exams that have been identified from that same pdf file content. The topics from each exam have also been identified.  
-
-        ```json
+        # Context: Previously Identified Topics
+        Use these as your primary "Name" keys if they appear in the text:
         {identified_exams}
-        ```
 
-        # Instructions
-
-        Extract the subtopics for the exam with the following id: `{exam["name"]}`. The output json object should reflect only this exam.
-
-        # File Content
-
-        ```txt
+        # Document Source Text
+        ### START OF CONTENT ###
         {file_content}
-        ```
+        ### END OF CONTENT ###
+
+        # Final Instructions
+        1. Target Exam: "{exam["name"]}"
+        2. Tasks: 
+            - Identify the sections in the text belonging to this exam.
+            - Map the granular subjects found to the parent topics.
+            - If a topic from the "Identified Topics" list is found, populate its `subtopics` array.
+        3. Output: Return the completed JSON array for this exam only.
         """
 
         response = self.deepseek_service.chat_completion(
@@ -213,68 +194,41 @@ class ExtractorService:
             (d for d in identified_exams if d.get('id') == exam_id), None)
 
         system_prompt = """
-        # Objective
+       # Objective
+        You are a specialized parser for Brazilian Public Sector Recruitment (Concursos Públicos). 
+        Extract job roles for a specific exam from the provided text.
 
-        You are tasked with analyzing the provided text content of a PDF document, which details information about public sector recruitment. The document is in Brazilian Portuguese. Your goal is to **extract the job roles** for the exam provided in the context, and structure them under their corresponding properties.
+        # Extraction Rules
+        1. LANGUAGE: Keep all text in original Brazilian Portuguese.
+        2. NUMBERS: Convert salary and openings to pure numbers (e.g., "R$ 5.000,00" -> 5000.00). Use null if not found.
+        3. CR: If a role is strictly "Cadastro Reserva", set openings to 0 and cr_openings to the value specified (or null if "CR" is mentioned without a number).
+        4. SCOPE: Only extract roles belonging to the specific exam name provided.
 
-        **CRITICAL CONSTRAINT:** The ONLY output must be the raw JSON array, starting with `[` and ending with `]`. DO NOT include any markdown formatting (e.g., ```json), commentary, or explanation. All extracted text values must be in the original Brazilian Portuguese.
+        # Schema (job_roles)
+        - name (string)
+        - salary (number)
+        - openings (number): Total direct vacancies.
+        - cr_openings (number): Total CR vacancies.
+        - verification_exam_name (string): Brief quote from text proving this role belongs to the requested exam.
 
-        # Database entity
-
-        ## `job_roles`
-
-        Represents the job roles given an exam. Those candidates who took an exam have the chance of being nominated for that job. Job roles are related to exams. An exam may have one or many job roles.
-
-        `job_roles` have the following properties.
-
-        - name: The name of the job role
-        - salary: The salary value for the job role
-        - openings: The number of openings for the job role. All direct openings ("ampla concorrência" and "vagas reservadas")
-        - cr_openings: The number of CR ("Cadastro Reserva") openings for the job role
-        - verification_exam_name: Why does this role belong to the requested ID?
-
-        ```json
-        name: string,
-        salary: number,
-        openings: number,
-        cr_openings: number,
-        verification_exam_name: string
-        ```
-
-        # Output 
-
-        The JSON output must be a single object array of the `job_roles` entity given a certain exam previously identified. ONLY return job roles related to the exam which id have been passed. Job roles related to other identified exams must not be in the output result.
-
-        ```json
-        [
-            {
-                name: string,
-                salary: number,
-                openings: number,
-                cr_openings: number
-            },
-        ],
-        ```
+        # Constraint
+        OUTPUT ONLY THE JSON ARRAY. NO MARKDOWN, NO EXPLANATION.
         """
-
+    
         user_prompt = f"""
-        # Identified exams
-
-        Here are the exams that have been identified from that same PDF file content (the topics from each exam have also been identified):
-
-        ```json
+        # Context: Identified Exams
         {identified_exams}
-        ```
 
-        # Instructions
-
-        Extract the job roles for the exam with the following name: `{exam["name"]}`. The output json object should reflect only this exam. All job roles related to other exams must be ignored
-
-        # File Content
-
-        ```txt
+        # Document Source Text
+        ### START ###
         {file_content}
-        ```
+        ### END ###
+
+        # Final Task
+        1. Target Exam: "{exam["name"]}"
+        2. Find all job roles associated with this exam.
+        3. Return the data as a JSON array matching the schema provided in your instructions.
+        4. Reminder: Return ONLY the raw JSON.
         """
 
         response = self.deepseek_service.chat_completion(
