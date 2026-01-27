@@ -1,6 +1,7 @@
 import sqlite3
 import logging
 import time
+import sys
 
 from datetime import datetime
 
@@ -10,15 +11,23 @@ class DailyLimitExceededError(Exception):
     pass
 
 
+logging.basicConfig(
+    stream=sys.stdout,
+    format='%(asctime)s - %(levelname)s - %(funcName)s - %(message)s',
+    datefmt='%d-%b-%y %H:%M:%S',
+    level=logging.INFO 
+)
+
+
 class RateLimiter:
     def __init__(self, db_path='request_logs.db'):
         self.db_path = db_path
         self._init_db()
 
         # Configuration Constants
-        self.MAX_RPM = 10             # Rule #1 - Requests per minute
+        self.MAX_RPM = 4            # Rule #1 - Requests per minute
         self.MAX_TPM = 250_000        # Rule #2 - Tokens per minute
-        self.MAX_RPD = 250            # Rule #3 - Requests per day
+        self.MAX_RPD = 20            # Rule #3 - Requests per day
 
         self.logger = logging.getLogger(__name__)
 

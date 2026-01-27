@@ -4,6 +4,7 @@ import shutil
 import logging
 import imagehash
 import re
+import sys
 
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.datamodel.base_models import InputFormat, DocumentStream
@@ -16,6 +17,12 @@ from PIL import Image
 from ..supabase.supabase_service import SupabaseService
 from ..gemini_api.gemini_api_service import GeminiApiService
 
+logging.basicConfig(
+    stream=sys.stdout,
+    format='%(asctime)s - %(levelname)s - %(funcName)s - %(message)s',
+    datefmt='%d-%b-%y %H:%M:%S',
+    level=logging.INFO 
+)
 
 class DocumentProcessingService:
     def __init__(self):
@@ -268,9 +275,9 @@ class DocumentProcessingService:
                 self.logger.info(f'Handling image references for {doc_filename}')
                 self.handle_image_references(artifacts_folder_path, md_file_path)
             
-            self.logger.info(f'Adding image descriptions for {doc_filename}')
-            self.append_image_description(md_file_path)
-            
+                self.logger.info(f'Adding image descriptions for {doc_filename}')
+                self.append_image_description(md_file_path)
+                
             self.logger.info(f'Uploading markdown file to Supabase')
             markdown_upload_path = f"{doc_filename}/{doc_filename}.md"
             with open(md_file_path, 'rb') as f:
