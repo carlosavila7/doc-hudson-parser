@@ -39,6 +39,10 @@ def process_pdf(
     Returns:
         dict: A dictionary containing the processing status and paths to uploaded files.
     """
+    if start_page == 0 and end_page == 0:
+        start_page = None
+        end_page = None
+
     service: DocumentProcessingService = get_document_processing_service()
 
     return service.process_pdf_to_markdown_and_upload(
