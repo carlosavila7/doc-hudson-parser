@@ -14,8 +14,8 @@ from collections import Counter
 from pathlib import Path
 from PIL import Image
 
-from ..supabase.supabase_service import SupabaseService
-from ..gemini_api.gemini_api_service import GeminiApiService
+from app.supabase.supabase_service import SupabaseService
+from app.qwen_api.qwen_api_service import QwenApiService 
 
 logging.basicConfig(
     stream=sys.stdout,
@@ -27,7 +27,7 @@ logging.basicConfig(
 class DocumentProcessingService:
     def __init__(self):
         self.supabase_service = SupabaseService()
-        self.gemini_service = GeminiApiService()
+        self.qwen_service = QwenApiService()
         self.logger = logging.getLogger(__name__)
 
     def append_image_description(self, md_file_path: Path):
@@ -43,7 +43,7 @@ class DocumentProcessingService:
             image_tag = match.group(0)
             image_path = Path('temp') / Path(match.group(1))
 
-            image_description = self.gemini_service.generate_image_description(
+            image_description = self.qwen_service.get_image_caption(
                 image_path)
             
             image_tag_with_description = f'{image_tag}\n<!-- {image_description} -->'
@@ -268,8 +268,8 @@ class DocumentProcessingService:
             )
             
             pdf_path = Path(file_path)
+            artifacts_folder_path = Path("temp") / f"{md_file_path.stem}_artifacts"
             doc_filename = f"{pdf_path.parent.name[:-1]}_{md_file_path.stem}"
-            artifacts_folder_path = Path("temp") / f"{doc_filename}_artifacts"
             
             if artifacts_folder_path.exists():
                 self.logger.info(f'Handling image references for {doc_filename}')
