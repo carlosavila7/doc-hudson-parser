@@ -5,7 +5,7 @@ import requests
 
 # def workflow_trigger():
 st.set_page_config(page_title="n8n Pipeline Trigger",
-                page_icon="🚀", layout="wide")
+                   page_icon="🚀", layout="wide")
 
 st.title("n8n Workflow Trigger")
 
@@ -18,8 +18,9 @@ with col1:
     with st.expander("Select file"):
         response = requests.get(
             "http://python-api:8000/supabase/storage/pdf-files", params={"path": "tenders"})
-
-        options = tuple(d.get("name", None) for d in response.json())
+        files_list = response.json()
+        options = [f['name']
+                   for f in files_list if f['name'] != '.emptyFolderPlaceholder']
 
         pdf_name = st.selectbox(
             "Select the .pdf file to work with",
@@ -76,7 +77,7 @@ with col1:
         offices_sections = []
 
         headers_res = requests.get('http://python-api:8000/document-processing/file-headers',
-                                params={"bucket": "processed-files", "file_path": md_path})
+                                   params={"bucket": "processed-files", "file_path": md_path})
 
         with base_entities_tab:
             if headers_res:
@@ -129,7 +130,7 @@ with col2:
 
 if start_pipeline:
     pipeline_trigger = requests.post("http://n8n:5678/webhook/754b5961-2b27-426b-822e-8c7d29c3c989",
-                                    json={"file_path": md_path, "tender_url": tender_url, "base_entities_sections": base_entities_sections, "exam_subtopics_sections": exam_subtopics_sections, "job_roles_sections": job_roles_sections, "offices_sections": offices_sections})
+                                     json={"file_path": md_path, "tender_url": tender_url, "base_entities_sections": base_entities_sections, "exam_subtopics_sections": exam_subtopics_sections, "job_roles_sections": job_roles_sections, "offices_sections": offices_sections})
 
     if pipeline_trigger.status_code == 200:
         st.session_state.offer_id = pipeline_trigger.json().get("id")
