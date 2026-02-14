@@ -119,6 +119,7 @@ with col1:
                             f"`{header}`", key=f"offices_{i}")
                         offices_sections.append(
                             {"header": header, "selected": is_selected})
+        useTestUrl = st.toggle("Use test URL")
         start_pipeline = st.button(
             "Start pipeline", width="stretch", type="primary")
 
@@ -129,8 +130,9 @@ with col2:
         st.info("Select a file and click submit to preview the PDF.")
 
 if start_pipeline:
-    pipeline_trigger = requests.post("http://n8n:5678/webhook/754b5961-2b27-426b-822e-8c7d29c3c989",
-                                     json={"file_path": md_path, "tender_url": tender_url, "base_entities_sections": base_entities_sections, "exam_subtopics_sections": exam_subtopics_sections, "job_roles_sections": job_roles_sections, "offices_sections": offices_sections})
+    pipeline_trigger = requests.post("http://n8n:5678/webhook/754b5961-2b27-426b-822e-8c7d29c3c989" if not useTestUrl
+                                     else "http://n8n:5678/webhook-test/754b5961-2b27-426b-822e-8c7d29c3c989",
+                                     json={"file_path": md_path, "pdf_file_path": f"tenders/{pdf_path.stem}.pdf", "tender_url": tender_url, "base_entities_sections": base_entities_sections, "exam_subtopics_sections": exam_subtopics_sections, "job_roles_sections": job_roles_sections, "offices_sections": offices_sections})
 
     if pipeline_trigger.status_code == 200:
         st.session_state.offer_id = pipeline_trigger.json().get("id")

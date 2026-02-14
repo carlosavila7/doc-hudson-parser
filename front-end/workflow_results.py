@@ -21,7 +21,8 @@ def fetch_data(endpoint, params=None):
 
 # --- 1. URL & SESSION STATE ---
 with st.expander("Recruitment offer ID"):
-    offer_id = st.text_input("Recruitment offer ID", st.session_state.get("offer_id"))
+    offer_id = st.text_input("Recruitment offer ID",
+                             st.session_state.get("offer_id"))
 
 if not offer_id:
     st.warning("Please provide a recruitment offer ID")
@@ -35,11 +36,13 @@ if "selected_topic_id" not in st.session_state:
 
 # --- ROW 1: HEADER METRICS ---
 offer_data = fetch_data(f"recruitment-offers/{offer_id}")
+
 if offer_data:
     st.title(f"{offer_data.get('name', 'Process')}")
-    m1, m2, m3, m4, m5, m6 = st.columns(6)
+    m1, m2, m3 = st.columns(3)
+    m4, m5, m6 = st.columns(3)
     m1.metric("Status", offer_data.get("status", "-"))
-    m2.metric("Board", offer_data.get("examining_board", "-"))
+    m2.metric("Board", offer_data.get("examining_boards", {}).get("name", "-"))
     m3.metric("Year", offer_data.get("year", "-"))
     m4.metric("Scope", offer_data.get("scope", "-"))
     m5.metric("State", offer_data.get("state", "-"))
@@ -193,7 +196,7 @@ if st.session_state.selected_exam_id:
             width="small",
         ),
         "exam_id": None
-    }, column_order=("id", "name", "salary", "openings", "cr_openings", "created_at"))
+    }, column_order=("id", "name", "salary", "openings", "has_cr_openings", "created_at"))
 
     # --- ROW 5: OFFICES ---
     st.divider()
@@ -217,3 +220,24 @@ if st.session_state.selected_exam_id:
             width="small",
         )
     })
+
+if offer_data:
+    st.divider()
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        submit_selection = st.button(
+            "Get signed file URL", width='stretch')
+
+    signed_url_res = None
+
+    if submit_selection:
+        signed_url_res = requests.get(
+            "http://python-api:8000/supabase/storage/signed-url/pdf-files?",
+            params={"path": offer_data.get("pdf_file_path")}
+        )
+
+    with col2:
+        st.link_button(
+            "Preview file", signed_url_res.json().get("signedUrl") if signed_url_res is not None else "", width='stretch', disabled=(signed_url_res is None))
