@@ -201,14 +201,14 @@ class ExtractorService:
         # Extraction Rules
         1. LANGUAGE: Keep all text in original Brazilian Portuguese.
         2. NUMBERS: Convert salary and openings to pure numbers (e.g., "R$ 5.000,00" -> 5000.00). Use null if not found.
-        3. CR: If a role is strictly "Cadastro Reserva", set openings to 0 and cr_openings to the value specified (or null if "CR" is mentioned without a number).
+        3. CR: If a role is strictly "Cadastro Reserva", set openings to 0 and has_cr_openings to the true (event if "CR" is mentioned without a number).
         4. SCOPE: Only extract roles belonging to the specific exam name provided.
 
         # Schema (job_roles)
         - name (string)
         - salary (number)
         - openings (number): Total direct vacancies.
-        - cr_openings (number): Total CR vacancies.
+        - has_cr_openings (bool): Whether or not the job role has any cr openings.
         - verification_exam_name (string): Brief quote from text proving this role belongs to the requested exam.
 
         # Constraint

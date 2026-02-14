@@ -48,7 +48,7 @@ class SupabaseService:
 
     def get_recruitment_offer(self, offer_id: str):
         response = self.client.table("recruitment_offers").select(
-            "*").eq("id", offer_id).single().execute()
+            "*, examining_boards(*)").eq("id", offer_id).single().execute()
         if not response.data:
             raise HTTPException(status_code=404, detail="Offer not found")
         return response.data
