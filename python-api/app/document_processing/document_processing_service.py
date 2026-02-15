@@ -361,10 +361,40 @@ class DocumentProcessingService:
         file_content = file.decode()
 
         header_pattern = r'^(#{1,6}\s+.+)$'
-        all_headers = re.findall(header_pattern, file_content, re.MULTILINE)
 
-        counts = Counter(all_headers)
+        matches = list(re.finditer(header_pattern, file_content, re.MULTILINE))
+        counts = Counter([i.group(1) for i in matches])
+        unique_matches = [h for h in matches if counts[h.group(1)] == 1]
 
-        unique_headers = [h for h in all_headers if counts[h] == 1]
+        header_positions = [(m.group(1), m.start(1), m.end(1)) for m in unique_matches]
+        header_positions.sort(key=lambda x: x[1])
 
-        return unique_headers
+        results = []
+        content_len = len(file_content)
+
+        for uh in [i.group(1) for i in unique_matches]:
+            found_index = None
+            for i, (h, s, e) in enumerate(header_positions):
+                if h == uh:
+                    found_index = i
+                    start = s
+
+                    break
+
+            if found_index is None:
+                continue
+
+            if found_index + 1 < len(header_positions):
+                next_start = header_positions[found_index + 1][1]
+            else:
+                next_start = content_len
+
+            n_chars = max(0, next_start - start)
+
+            results.append({
+                'header': uh,
+                'n_chars': n_chars,
+                'token_approximation': n_chars * 0.3
+            })
+
+        return results
