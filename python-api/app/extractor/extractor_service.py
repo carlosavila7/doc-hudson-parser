@@ -314,10 +314,13 @@ class ExtractorService:
         start of the next 'selected: False' header.
         """
         sliced_parts = []
-
+        included_headers = []
         for i, item in enumerate(headers):
             if item.get("selected") is True:
                 header_text = item.get("header")
+                
+                if header_text in included_headers:
+                    continue
 
                 start_index = content.find(header_text)
 
@@ -334,6 +337,8 @@ class ExtractorService:
                         if find_next != -1:
                             end_index = find_next
                             break
+                    else:
+                        included_headers.append(next_item.get("header"))
 
                 sliced_parts.append(content[start_index:end_index].strip())
 
