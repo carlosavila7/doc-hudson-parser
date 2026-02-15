@@ -4,8 +4,8 @@ import streamlit as st
 import requests
 
 # def workflow_trigger():
-st.set_page_config(page_title="n8n Pipeline Trigger",
-                   page_icon="🚀", layout="wide")
+st.set_page_config(page_title="Pipeline Trigger",
+                   page_icon=":material/home:", layout="wide")
 
 st.title("n8n Workflow Trigger")
 

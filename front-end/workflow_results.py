@@ -2,7 +2,8 @@ import streamlit as st
 import requests
 import pandas as pd
 
-st.set_page_config(layout="wide", page_title="Recruitment Management")
+st.set_page_config(layout="wide", page_title="Extraction results",
+                   page_icon=":material/overview:")
 
 # Constants
 API_BASE_URL = "http://python-api:8000/supabase"

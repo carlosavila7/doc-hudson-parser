@@ -6,7 +6,7 @@ from pathlib import Path
 
 st.title("Document Management Dashboard")
 
-st.set_page_config(layout="wide")
+st.set_page_config(layout="wide", page_icon=":material/document_search:", page_title="Document processing",)
 
 # --- Expander 1: Upload to Supabase ---
 with st.expander("Upload New PDF Document"):
@@ -139,14 +139,15 @@ with st.expander("Preview converted markdown file"):
 
     if md_path:
         md_path = Path(md_path)
-        
-        full_path = Path(md_path.stem) / md_path if len(md_path.parts) == 1 else md_path
+
+        full_path = Path(md_path.stem) / \
+            md_path if len(md_path.parts) == 1 else md_path
 
         md_signed_url = requests.get(
             "http://python-api:8000/supabase/storage/signed-url/processed-files?",
             params={"path": full_path}
         )
-        
+
         if md_signed_url.status_code == 200:
             signed_url = md_signed_url.json().get("signedUrl")
 
