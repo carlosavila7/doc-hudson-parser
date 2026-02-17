@@ -1,0 +1,182 @@
+{
+  "name": "Create exam job roles",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "exam_id"
+            },
+            {
+              "name": "job_roles",
+              "type": "array"
+            },
+            {
+              "name": "openings",
+              "type": "number"
+            },
+            {
+              "name": "cr_openings",
+              "type": "number"
+            }
+          ]
+        }
+      },
+      "id": "9909ddd9-c299-4c67-a31f-15937c503a77",
+      "typeVersion": 1.1,
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        272,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.first().json.job_roles;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        352
+      ],
+      "id": "4be9388e-df7b-4ab6-81a3-03dd4a4e76af",
+      "name": "job_roles"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        736,
+        352
+      ],
+      "id": "e5e0d0e1-9cbd-4462-ae91-fa2940e98455",
+      "name": "Loop over job roles"
+    },
+    {
+      "parameters": {
+        "tableId": "job_roles",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $json.name }}"
+            },
+            {
+              "fieldId": "salary",
+              "fieldValue": "={{ $json.salary }}"
+            },
+            {
+              "fieldId": "exam_id",
+              "fieldValue": "={{ $('When Executed by Another Workflow').item.json.exam_id }}"
+            },
+            {
+              "fieldId": "openings",
+              "fieldValue": "={{ $('job_roles').item.json.openings }}"
+            },
+            {
+              "fieldId": "cr_openings",
+              "fieldValue": "={{ $('job_roles').item.json.cr_openings }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        960,
+        368
+      ],
+      "id": "7b7d81b7-d181-43d1-9e26-772faec6ecef",
+      "name": "Create job roles",
+      "credentials": {
+        "supabaseApi": {
+          "id": "iowqJH6SvuJ1vc5Q",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "exam_id": "First item",
+          "topics": [
+            {
+              "name": "Second item",
+              "salary": "100"
+            },
+            {
+              "name": "third item",
+              "salary": "200"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "job_roles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "job_roles": {
+      "main": [
+        [
+          {
+            "node": "Loop over job roles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop over job roles": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Create job roles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create job roles": {
+      "main": [
+        [
+          {
+            "node": "Loop over job roles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3a96dad3-21a2-4a5e-84fb-1f46307b198f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a08c308984b16bf0f355840820d69320ffbd04651219cb505ec0379fdeb93d33"
+  },
+  "id": "etGAV3AVtJIxFQsW",
+  "tags": []
+}

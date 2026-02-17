@@ -1,0 +1,290 @@
+{
+  "name": "Create exam subtopics",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "exam_topic_id"
+            },
+            {
+              "name": "topic"
+            },
+            {
+              "name": "subtopics",
+              "type": "array"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "b6d02589-047d-4d1d-bf8c-b1d3d0bacaa4",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.first().json.subtopics.map((subtopic) => ({ name: subtopic }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "60daf2ec-b1ca-4c30-9345-cfab14834367",
+      "name": "subtopics"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        416,
+        0
+      ],
+      "id": "873be9c2-3626-4ac4-b512-c6a360d500c6",
+      "name": "Loop over subtopics"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "topics",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "name",
+              "keyValue": "={{ $json.name }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        704,
+        16
+      ],
+      "id": "58cda285-444e-42bb-a5a4-93ee31986c2c",
+      "name": "Get subtopic",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "iowqJH6SvuJ1vc5Q",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "84853200-53fe-4845-8e5f-58a307167a44",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        976,
+        16
+      ],
+      "id": "1da00773-f964-4f43-ab10-21b3435c862d",
+      "name": "Subtopic exists?"
+    },
+    {
+      "parameters": {
+        "tableId": "topics",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $('Loop over subtopics').item.json.name }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1248,
+        64
+      ],
+      "id": "11e6167c-cb56-44f4-8bee-a602b81e9f4c",
+      "name": "Create subtopic",
+      "credentials": {
+        "supabaseApi": {
+          "id": "iowqJH6SvuJ1vc5Q",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "exam_subtopics",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "exam_subtopic_id",
+              "fieldValue": "={{ $json.id }}"
+            },
+            {
+              "fieldId": "exam_topic_id",
+              "fieldValue": "={{ $('When Executed by Another Workflow').item.json.exam_topic_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1520,
+        0
+      ],
+      "id": "f3b89c60-8dc8-4df3-a21c-5549e47d657b",
+      "name": "Create subtopic to topic",
+      "credentials": {
+        "supabaseApi": {
+          "id": "iowqJH6SvuJ1vc5Q",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "exam_topic_id": "43563456",
+          "topic": "my-topic",
+          "subtopics": [
+            "Subtopic A",
+            "Matemática"
+          ]
+        }
+      }
+    ]
+  },
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "subtopics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "subtopics": {
+      "main": [
+        [
+          {
+            "node": "Loop over subtopics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop over subtopics": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Get subtopic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get subtopic": {
+      "main": [
+        [
+          {
+            "node": "Subtopic exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Subtopic exists?": {
+      "main": [
+        [
+          {
+            "node": "Create subtopic to topic",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create subtopic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create subtopic": {
+      "main": [
+        [
+          {
+            "node": "Create subtopic to topic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create subtopic to topic": {
+      "main": [
+        [
+          {
+            "node": "Loop over subtopics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "73abc5b6-07c3-4391-8cc7-3c1b044b9a8c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a08c308984b16bf0f355840820d69320ffbd04651219cb505ec0379fdeb93d33"
+  },
+  "id": "n6fLNBJX4uEQmJ6F",
+  "tags": []
+}

@@ -1,0 +1,177 @@
+{
+  "name": "Document processing",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Upload file",
+        "formDescription": "This will upload the entered file to Supabase storage with the path (optional) informed.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "file path",
+              "placeholder": "orgao_YYYY.pdf"
+            },
+            {
+              "fieldLabel": "type",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "tender"
+                  },
+                  {
+                    "option": "exam"
+                  },
+                  {
+                    "option": "answer_sheet"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "file to upload",
+              "fieldType": "file",
+              "acceptFileTypes": ".pdf",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Data start page",
+              "fieldType": "number"
+            },
+            {
+              "fieldLabel": "Data end page",
+              "fieldType": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        0,
+        -320
+      ],
+      "id": "58dc402b-8005-4156-bdf5-117995c0687e",
+      "name": "On form submission",
+      "webhookId": "e70d6280-252e-4363-a9ce-70a2797d083d",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://python-api:8000/supabase/storage/upload-file/pdf-files",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "path",
+              "value": "={{ $json.type }}s/{{ $json['file path'] }}.pdf"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "multipart/form-data"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "file_to_upload"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        208,
+        -320
+      ],
+      "id": "20799947-5757-4ef3-8c77-d5d5d008a3ce",
+      "name": "Upload PDF to Supabase",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://python-api:8000/document-processing/process-pdf",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "file_path",
+              "value": "={{ $json.path }}"
+            },
+            {
+              "name": "start_page",
+              "value": "={{ $('On form submission').item.json['Data start page'] }}"
+            },
+            {
+              "name": "end_page",
+              "value": "={{ $('On form submission').item.json['Data end page'] }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 600000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        416,
+        -320
+      ],
+      "id": "f68cb123-1ef4-4da1-a69f-05f5d9271493",
+      "name": "Parse PDF to MD and upload to Supabase",
+      "alwaysOutputData": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Upload PDF to Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload PDF to Supabase": {
+      "main": [
+        [
+          {
+            "node": "Parse PDF to MD and upload to Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "f55b00c3-339a-4231-9c34-e881c8ba0109",
+  "meta": {
+    "instanceId": "a08c308984b16bf0f355840820d69320ffbd04651219cb505ec0379fdeb93d33"
+  },
+  "id": "FzjcT7DGpXkhA0dD",
+  "tags": []
+}

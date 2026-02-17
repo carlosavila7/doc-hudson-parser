@@ -1,0 +1,963 @@
+{
+  "name": "Extract exams+ entities",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "754b5961-2b27-426b-822e-8c7d29c3c989",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -912,
+        -384
+      ],
+      "id": "d5f3c39d-d7bd-4eeb-bcb6-09e5b2bb3458",
+      "name": "Webhook",
+      "webhookId": "754b5961-2b27-426b-822e-8c7d29c3c989"
+    },
+    {
+      "parameters": {
+        "tableId": "recruitment_offers",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $json.name }}"
+            },
+            {
+              "fieldId": "examining_board_id",
+              "fieldValue": "={{ $json.examining_board_id }}"
+            },
+            {
+              "fieldId": "year",
+              "fieldValue": "={{ $json.year }}"
+            },
+            {
+              "fieldId": "scope",
+              "fieldValue": "={{ $json.scope }}"
+            },
+            {
+              "fieldId": "city",
+              "fieldValue": "={{ $json.city }}"
+            },
+            {
+              "fieldId": "state",
+              "fieldValue": "={{ $json.state }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "CONCLUDED"
+            },
+            {
+              "fieldId": "tender_url",
+              "fieldValue": "={{ $('Webhook').item.json.body.tender_url }}"
+            },
+            {
+              "fieldId": "pdf_file_path",
+              "fieldValue": "={{ $('Webhook').item.json.body.pdf_file_path }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        384,
+        -368
+      ],
+      "id": "666dcc06-1df2-4f6b-94b8-6dced5f3f27b",
+      "name": "Create recruitment_offer",
+      "credentials": {
+        "supabaseApi": {
+          "id": "iowqJH6SvuJ1vc5Q",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "http://python-api:8000/extractor/base-entities",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "file_bucket",
+              "value": "processed-files"
+            },
+            {
+              "name": "file_path",
+              "value": "={{ $json.body.file_path }}"
+            },
+            {
+              "name": "header_filter",
+              "value": "={{ JSON.stringify($json.body.base_entities_sections) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -704,
+        -384
+      ],
+      "id": "c2ddd6cc-ac57-407a-912d-976e78455a57",
+      "name": "Extract base entities"
+    },
+    {
+      "parameters": {
+        "tableId": "exams",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "recruitment_offer_id",
+              "fieldValue": "={{ $('Create recruitment_offer').item.json.id }}"
+            },
+            {
+              "fieldId": "education_level",
+              "fieldValue": "={{ $json.education_level }}"
+            },
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $json.name }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        800,
+        -368
+      ],
+      "id": "30b1a64f-0394-4c80-9d45-ea4e619bb23c",
+      "name": "Create exam",
+      "credentials": {
+        "supabaseApi": {
+          "id": "iowqJH6SvuJ1vc5Q",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return $('Extract base entities').first().json.exams;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        592,
+        -368
+      ],
+      "id": "1266af12-e7ad-42b4-a5a5-be4009f7847e",
+      "name": "[pipe] exams"
+    },
+    {
+      "parameters": {
+        "jsCode": "const examIdWithTopics = $input\n  .all()\n  .map((exam, i) => ({\n    id: exam.json.id,\n    topics: $(\"[pipe] exams\").all()[i].json.exam_topics,\n  }));\n\nconst result = examIdWithTopics.flatMap((group) =>\n  group.topics.map((topic) => ({\n    examId: group.id,\n    topic: topic.name,\n  })),\n);\n\nreturn result;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1008,
+        -368
+      ],
+      "id": "220726bf-2b9e-4a4b-94c7-832e025d2934",
+      "name": "[pipe] topics with exam id"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1232,
+        -368
+      ],
+      "id": "c6468993-f052-4c93-bd62-63237933bf97",
+      "name": "Loop over topics"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "topics",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "name",
+              "keyValue": "={{ $json.topic }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        -176
+      ],
+      "id": "4cd16190-6d90-4f03-aac9-6ec57057b7fa",
+      "name": "Get topic",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "iowqJH6SvuJ1vc5Q",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "84853200-53fe-4845-8e5f-58a307167a44",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1680,
+        -176
+      ],
+      "id": "a37fa236-925f-4223-b64c-4629028cbbc9",
+      "name": "Topic exists?"
+    },
+    {
+      "parameters": {
+        "tableId": "topics",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $('Loop over topics').item.json.topic }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1936,
+        -112
+      ],
+      "id": "adcd64ca-86c9-4199-9289-1e902b2fbde7",
+      "name": "Create topic",
+      "credentials": {
+        "supabaseApi": {
+          "id": "iowqJH6SvuJ1vc5Q",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "exam_topics",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "topic_id",
+              "fieldValue": "={{ $json.id }}"
+            },
+            {
+              "fieldId": "exam_id",
+              "fieldValue": "={{ $('Loop over topics').item.json.examId }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2176,
+        -176
+      ],
+      "id": "6d27637e-6496-40a3-888f-bb03031d2178",
+      "name": "Link topic to exam",
+      "credentials": {
+        "supabaseApi": {
+          "id": "iowqJH6SvuJ1vc5Q",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1856,
+        -608
+      ],
+      "id": "59f60058-cdd0-429a-afc6-29e72dac7f6e",
+      "name": "Loop over exam IDs"
+    },
+    {
+      "parameters": {
+        "jsCode": "const examIds = [];\n\n$input.all().forEach((item) => {\n  if(!examIds.includes((item.json.exam_id)))\n    examIds.push(item.json.exam_id);\n});\n\nreturn examIds.map((item) => ({examId: item}))"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1648,
+        -608
+      ],
+      "id": "e253b9ae-02e8-440a-949e-5ca74743e85a",
+      "name": "[pipe] exam IDs"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "fMliKhwfBzpBtfxn",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/fMliKhwfBzpBtfxn",
+          "cachedResultName": "Create exam topics (isolated)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "recruitment_offer_id": "={{ $('Create recruitment_offer').first().json.id }}",
+            "exam_id": "={{ $json.examId }}",
+            "file_path": "={{ $('Webhook').first().json.body.file_path }}",
+            "header_filter": "={{ $('Webhook').first().json.body.exam_subtopics_sections }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "recruitment_offer_id",
+              "displayName": "recruitment_offer_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "exam_id",
+              "displayName": "exam_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "file_path",
+              "displayName": "file_path",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "header_filter",
+              "displayName": "header_filter",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "array",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        2256,
+        -720
+      ],
+      "id": "29d27fec-1b5d-4139-8704-156dc8c29475",
+      "name": "Create exam subtopics",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "u24lLLKXKegRceNh",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/u24lLLKXKegRceNh",
+          "cachedResultName": "Create exam job roles (isolated)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "recruitment_offer_id": "={{ $('Create recruitment_offer').first().json.id }}",
+            "exam_id": "={{ $json.examId }}",
+            "file_path": "={{ $('Webhook').first().json.body.file_path }}",
+            "header_filter": "={{ $('Webhook').first().json.body.exam_subtopics_sections }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "recruitment_offer_id",
+              "displayName": "recruitment_offer_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "exam_id",
+              "displayName": "exam_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "file_path",
+              "displayName": "file_path",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "header_filter",
+              "displayName": "header_filter",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "array",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        2128,
+        -560
+      ],
+      "id": "64ccc0e1-7b8c-4779-8a34-f0a064881e9d",
+      "name": "Create exam job roles"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "ajvByZ0pQvBUSB1m",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/ajvByZ0pQvBUSB1m",
+          "cachedResultName": "Create exam offices (isolated)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "recruitment_offer_id": "={{ $('Create recruitment_offer').first().json.id }}",
+            "exam_id": "={{ $json.examId }}",
+            "file_path": "={{ $('Webhook').first().json.body.file_path }}",
+            "header_filter": "={{ $('Webhook').first().json.body.exam_subtopics_sections }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "recruitment_offer_id",
+              "displayName": "recruitment_offer_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "exam_id",
+              "displayName": "exam_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "file_path",
+              "displayName": "file_path",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "header_filter",
+              "displayName": "header_filter",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "array"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        2048,
+        -384
+      ],
+      "id": "eed7ffaf-ae17-41aa-b4e5-980dd82e6248",
+      "name": "Create exam offices"
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2560,
+        -416
+      ],
+      "id": "84f5c5f0-c79a-470e-94bb-6eff5bddb6b3",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        592,
+        -608
+      ],
+      "id": "203d7c3e-02a7-4c3e-b99f-8e4d9119429d",
+      "name": "Return recruitment offer"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "examining_boards",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "name",
+              "keyValue": "={{ $json.examining_board }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -496,
+        -384
+      ],
+      "id": "44acdd33-d66b-4a76-8e28-d91920cab812",
+      "name": "Get examining board",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "iowqJH6SvuJ1vc5Q",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "823ece7c-a4ea-46ca-a164-1610c7219795",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -288,
+        -384
+      ],
+      "id": "23c67cc7-f51c-49c5-82ad-792db8c984bc",
+      "name": "Examining board exists?"
+    },
+    {
+      "parameters": {
+        "tableId": "examining_boards",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $('Extract base entities').item.json.examining_board }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -288
+      ],
+      "id": "5f7cfd6b-d141-4deb-bf76-5c8b3e047402",
+      "name": "Create examining board",
+      "credentials": {
+        "supabaseApi": {
+          "id": "iowqJH6SvuJ1vc5Q",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const originalResponse = $('Extract base entities').first().json\nconst examining_board_id = $input.first().json.id\n\noriginalResponse['examining_board_id'] = examining_board_id;\n\nreturn originalResponse;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        128,
+        -368
+      ],
+      "id": "a63b5af1-0aaa-4f5f-83ec-208bf825820a",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract base entities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create recruitment_offer": {
+      "main": [
+        [
+          {
+            "node": "[pipe] exams",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Return recruitment offer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract base entities": {
+      "main": [
+        [
+          {
+            "node": "Get examining board",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create exam": {
+      "main": [
+        [
+          {
+            "node": "[pipe] topics with exam id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[pipe] exams": {
+      "main": [
+        [
+          {
+            "node": "Create exam",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[pipe] topics with exam id": {
+      "main": [
+        [
+          {
+            "node": "Loop over topics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop over topics": {
+      "main": [
+        [
+          {
+            "node": "[pipe] exam IDs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get topic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get topic": {
+      "main": [
+        [
+          {
+            "node": "Topic exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Topic exists?": {
+      "main": [
+        [
+          {
+            "node": "Link topic to exam",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create topic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create topic": {
+      "main": [
+        [
+          {
+            "node": "Link topic to exam",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Link topic to exam": {
+      "main": [
+        [
+          {
+            "node": "Loop over topics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop over exam IDs": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Create exam subtopics",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create exam job roles",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create exam offices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[pipe] exam IDs": {
+      "main": [
+        [
+          {
+            "node": "Loop over exam IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create exam subtopics": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create exam job roles": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Create exam offices": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Loop over exam IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get examining board": {
+      "main": [
+        [
+          {
+            "node": "Examining board exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Examining board exists?": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create examining board",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create examining board": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Create recruitment_offer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b170f086-76cf-4bb3-abdc-b487597a2e68",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a08c308984b16bf0f355840820d69320ffbd04651219cb505ec0379fdeb93d33"
+  },
+  "id": "nB5V8npJBvrUJzx2",
+  "tags": []
+}

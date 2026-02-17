@@ -1,0 +1,274 @@
+{
+  "name": "Create exam offices",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "exam_id"
+            },
+            {
+              "name": "offices",
+              "type": "array"
+            }
+          ]
+        }
+      },
+      "id": "0848b11b-ccf7-4865-991a-9132008166f1",
+      "typeVersion": 1.1,
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        272,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        736,
+        352
+      ],
+      "id": "eebe2f27-b68d-472a-8b9d-7936c0e94c91",
+      "name": "Loop over job roles"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.first().json.offices;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        352
+      ],
+      "id": "67755ad3-e579-432e-9b44-7e348ebd6e93",
+      "name": "offices"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "offices",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "name",
+              "keyValue": "={{ $json.name }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        960,
+        368
+      ],
+      "id": "b5c3098f-50ea-4ba1-8307-3bc8a420e365",
+      "name": "Get a row",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "iowqJH6SvuJ1vc5Q",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "00a9c560-0b5e-445e-9ce4-bc6dd00882b7",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1200,
+        368
+      ],
+      "id": "be8bcc66-4ff8-4bd8-8d86-d8b770f2629b",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "tableId": "offices",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $('offices').item.json.name }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1408,
+        464
+      ],
+      "id": "b30ab170-a3b8-44f8-bdc3-72fccf5a618f",
+      "name": "Create a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "iowqJH6SvuJ1vc5Q",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "exam_offices",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "exam_id",
+              "fieldValue": "={{ $('When Executed by Another Workflow').item.json.exam_id }}"
+            },
+            {
+              "fieldId": "office_id",
+              "fieldValue": "={{ $json.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1648,
+        352
+      ],
+      "id": "2c566759-d315-454b-ac59-6d58fd4df62a",
+      "name": "Link office to exam",
+      "credentials": {
+        "supabaseApi": {
+          "id": "iowqJH6SvuJ1vc5Q",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "offices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop over job roles": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Get a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "offices": {
+      "main": [
+        [
+          {
+            "node": "Loop over job roles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a row": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Link office to exam",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row": {
+      "main": [
+        [
+          {
+            "node": "Link office to exam",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Link office to exam": {
+      "main": [
+        [
+          {
+            "node": "Loop over job roles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "02f9599b-2ce2-4b37-9906-de8da9526899",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a08c308984b16bf0f355840820d69320ffbd04651219cb505ec0379fdeb93d33"
+  },
+  "id": "ka6Q7VSwD1MYpScK",
+  "tags": []
+}

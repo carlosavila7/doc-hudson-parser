@@ -1,0 +1,347 @@
+{
+  "name": "Create topics (isolated)",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "exam_id"
+            },
+            {
+              "name": "topic"
+            }
+          ]
+        }
+      },
+      "id": "c055762a-8fe7-4141-a639-df2372f30060",
+      "typeVersion": 1.1,
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        288,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.first().json.topics;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        352
+      ],
+      "id": "0b27de83-08aa-4627-979f-f8e0c2613526",
+      "name": "exam_topics"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        736,
+        352
+      ],
+      "id": "b6a68435-804d-44be-8416-beede72ede89",
+      "name": "Loop over exam topics"
+    },
+    {
+      "parameters": {
+        "tableId": "exam_topics",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "topic_id",
+              "fieldValue": "={{ $json.id }}"
+            },
+            {
+              "fieldId": "exam_id",
+              "fieldValue": "={{ $('When Executed by Another Workflow').item.json.exam_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1248,
+        144
+      ],
+      "id": "621f70d8-8731-447c-b5ef-26f2ce0510b7",
+      "name": "Link topic to exam",
+      "credentials": {
+        "supabaseApi": {
+          "id": "iowqJH6SvuJ1vc5Q",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "topics",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "name",
+              "keyValue": "={{ $json.topic }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        528,
+        160
+      ],
+      "id": "8d875b80-1549-4277-8636-cff572c30d37",
+      "name": "Get topic",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "iowqJH6SvuJ1vc5Q",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "84853200-53fe-4845-8e5f-58a307167a44",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        768,
+        160
+      ],
+      "id": "8070ce7f-35e5-4346-8978-03083e25d752",
+      "name": "Topic exists?"
+    },
+    {
+      "parameters": {
+        "tableId": "topics",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $('Loop over exam topics').item.json.name }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1024,
+        208
+      ],
+      "id": "9f3b876f-6cff-42ae-9332-34ec2bc4c592",
+      "name": "Create topic",
+      "credentials": {
+        "supabaseApi": {
+          "id": "iowqJH6SvuJ1vc5Q",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "n6fLNBJX4uEQmJ6F",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/n6fLNBJX4uEQmJ6F",
+          "cachedResultName": "Create subtopics"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "exam_topic_id": "={{ $json.id }}",
+            "topic": "={{ $('Loop over exam topics').item.json.name }}",
+            "subtopics": "={{ $('Loop over exam topics').item.json.subtopics }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "exam_topic_id",
+              "displayName": "exam_topic_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "topic",
+              "displayName": "topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "subtopics",
+              "displayName": "subtopics",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "array",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1872,
+        352
+      ],
+      "id": "a1a56cdb-c7db-4256-b222-9857ffd34eac",
+      "name": "Create subtopics",
+      "disabled": true
+    }
+  ],
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "exam_id": "First item",
+          "topic": "Second item"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Get topic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "exam_topics": {
+      "main": [
+        [
+          {
+            "node": "Loop over exam topics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop over exam topics": {
+      "main": [
+        [],
+        []
+      ]
+    },
+    "Link topic to exam": {
+      "main": [
+        []
+      ]
+    },
+    "Get topic": {
+      "main": [
+        [
+          {
+            "node": "Topic exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Topic exists?": {
+      "main": [
+        [
+          {
+            "node": "Link topic to exam",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create topic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create topic": {
+      "main": [
+        [
+          {
+            "node": "Link topic to exam",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create subtopics": {
+      "main": [
+        [
+          {
+            "node": "Loop over exam topics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "7aadb36a-e99d-4457-b642-5a8f8bdefbdd",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a08c308984b16bf0f355840820d69320ffbd04651219cb505ec0379fdeb93d33"
+  },
+  "id": "DYv1CUBHlrCQIowx",
+  "tags": []
+}

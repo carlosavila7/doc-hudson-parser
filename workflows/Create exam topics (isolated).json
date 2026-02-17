@@ -1,0 +1,822 @@
+{
+  "name": "Create exam topics (isolated)",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "recruitment_offer_id"
+            },
+            {
+              "name": "exam_id"
+            },
+            {
+              "name": "file_path"
+            },
+            {
+              "name": "header_filter",
+              "type": "array"
+            }
+          ]
+        }
+      },
+      "id": "9b5b68a7-388f-4a50-99fb-65ff3fce5103",
+      "typeVersion": 1.1,
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        -192,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "exams",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "recruitment_offer_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.recruitment_offer_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        32,
+        208
+      ],
+      "id": "428ba05b-2d35-4cc3-944b-f6e2fe98a2d9",
+      "name": "Get exams",
+      "credentials": {
+        "supabaseApi": {
+          "id": "iowqJH6SvuJ1vc5Q",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "exam_topics",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "exam_id",
+              "condition": "eq",
+              "keyValue": "={{ $('When Executed by Another Workflow').item.json.exam_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        448,
+        208
+      ],
+      "id": "6d3f9541-e3d4-4238-ab1e-cd9fa109535a",
+      "name": "Get exam topics",
+      "credentials": {
+        "supabaseApi": {
+          "id": "iowqJH6SvuJ1vc5Q",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        688,
+        96
+      ],
+      "id": "0048e423-4c28-4555-9b65-5c991c8ee281",
+      "name": "Aggregate topics into single list"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "topics",
+        "filterType": "string",
+        "filterString": "=id=in.({{ $json.data.map(t => t.topic_id) }})"
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        928,
+        96
+      ],
+      "id": "ef7d60a0-5805-41a9-aca6-81117fdcd163",
+      "name": "Get topics",
+      "credentials": {
+        "supabaseApi": {
+          "id": "iowqJH6SvuJ1vc5Q",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const topics = $input\n  .all()[0]\n  .json.data.map((i) => ({ name: i.name, subtopics: [] }));\nconst exams = $(\"Aggregate exams\").first().json.data;\n\nexams.forEach((exam) => {\n  if (exam.id === $(\"When Executed by Another Workflow\").first().json.exam_id)\n    exam[\"topics\"] = topics;\n});\n\nreturn exams;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        0
+      ],
+      "id": "8e0f3841-9439-45c5-b6b4-0f2e518dafd2",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "url": "=http://python-api:8000/extractor/exam-subtopics/{{ $('When Executed by Another Workflow').item.json.exam_id }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "file_key",
+              "value": "={{ $('When Executed by Another Workflow').item.json.file_path }}"
+            },
+            {
+              "name": "file_bucket",
+              "value": "processed-files"
+            },
+            {
+              "name": "identified_exams",
+              "value": "={{ JSON.stringify($json.data) }}"
+            },
+            {
+              "name": "header_filter",
+              "value": "={{ $('When Executed by Another Workflow').item.json.header_filter }}"
+            },
+            {
+              "name": "model",
+              "value": "deepseek-chat"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 600000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2112,
+        144
+      ],
+      "id": "de190b4f-94ae-4702-9ecb-bc00cc2f2f8d",
+      "name": "GET exam subtopics"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1872,
+        0
+      ],
+      "id": "70f5b554-3fd0-43bd-a607-6ae3f8e97095",
+      "name": "Aggregate2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const res = [];\n$input.first().json.data.forEach((topic) => {\n  topic.subtopics.forEach((subtopic) => {\n    res.push({\n      topic: topic.name,\n      subtopic,\n      examTopicId: topic.id,\n      topicId: topic.topic_id,\n    });\n  });\n});\nreturn res;\n// return $input.data.first().json.subtopics.map((i) => ({\n//   examTopicId: $input.first().json.id,\n//   topicId: $input.first().json.topic_id,\n//   topic: $input.first().json.name,\n//   subtopic: i,\n// }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2768,
+        208
+      ],
+      "id": "dcf97287-4d8b-4d46-9238-3d17163c67be",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        3024,
+        208
+      ],
+      "id": "d058e49c-159a-4c4f-828b-dd9b58edc5a5",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "fieldsToMatchString": "name",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2368,
+        336
+      ],
+      "id": "f84d3d99-aaa9-4204-86fd-91e52261bcec",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2576,
+        336
+      ],
+      "id": "fa1aff65-0ce7-4f9e-9f45-942606cecb7c",
+      "name": "Aggregate3"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        240,
+        208
+      ],
+      "id": "7cf5c315-ff4e-4f5e-8f3a-65a40a5df33f",
+      "name": "Aggregate exams"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "advanced": true,
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "id",
+              "field2": "topic_id"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1184,
+        192
+      ],
+      "id": "5dfd3d22-2dba-4cb1-8eff-d3a107e7fb70",
+      "name": "Merge exam_topic + topic + exam"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1376,
+        192
+      ],
+      "id": "01f3c4ec-3888-4921-bd23-fea82b3a73c8",
+      "name": "Aggregate into single list"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.first().json.data"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        224
+      ],
+      "id": "7c86715f-8f1e-47ad-8c6e-45698fdcd2ff",
+      "name": "Split list into items"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "topics",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "name",
+              "keyValue": "={{ $json.subtopic }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3264,
+        224
+      ],
+      "id": "9d0abdb6-ff3e-4218-9c29-d9a2efa7b25e",
+      "name": "Get topic",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "iowqJH6SvuJ1vc5Q",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "84853200-53fe-4845-8e5f-58a307167a44",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3504,
+        224
+      ],
+      "id": "20ec553b-4ccf-4ec2-8989-bb9e2c6605a3",
+      "name": "Topic exists?",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "tableId": "topics",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $('Loop Over Items').item.json.subtopic }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3888,
+        256
+      ],
+      "id": "fc5f7e15-48cb-4823-9d4f-270afe80ffab",
+      "name": "Create topic",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "iowqJH6SvuJ1vc5Q",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "exam_subtopics",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "exam_subtopic_id",
+              "fieldValue": "={{ $json.id }}"
+            },
+            {
+              "fieldId": "exam_topic_id",
+              "fieldValue": "={{ $('Loop Over Items').item.json.examTopicId }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        4192,
+        208
+      ],
+      "id": "9dfc5c84-48a0-42b5-9571-fd37fd5ae5eb",
+      "name": "Link topic to exam",
+      "credentials": {
+        "supabaseApi": {
+          "id": "iowqJH6SvuJ1vc5Q",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "recruitment_offer_id": "44031ebb-ca5b-44a5-ac88-747335781472",
+          "exam_id": "138248c1-8ba6-4803-9517-61d04c158131",
+          "file_path": "tender_bb2022/tender_bb2022.md",
+          "header_filter": [
+            {
+              "header": "## EDITAL DE ABERTURA SELEÇÃO EXTERNA 2022/001 EDITAL Nº 01 - 2022/001 BB, DE 22 DE DEZEMBRO DE 2022 CARREIRA ADMINISTRATIVA -CARGO ESCRITURÁRIO",
+              "selected": false
+            },
+            {
+              "header": "## 1 - DAS DISPOSIÇÕES PRELIMINARES",
+              "selected": false
+            },
+            {
+              "header": "## 2 - DO CARGO",
+              "selected": false
+            },
+            {
+              "header": "## 2.2 -Classificação e Aproveitamento .",
+              "selected": false
+            },
+            {
+              "header": "## 3 - DOS REQUESITOS E DAS CONDIÇÕES PARA ADMISSÃO NO CARGO",
+              "selected": false
+            },
+            {
+              "header": "## 4 - DA RESERVA DE VAGAS",
+              "selected": false
+            },
+            {
+              "header": "## 4.1 -DAS VAGAS RESERVADAS ÀS PESSOAS COM DEFICIÊNCIA(PCD).",
+              "selected": false
+            },
+            {
+              "header": "## 4.2 -DAS VAGAS RESERVADAS AOS(ÀS) CANDIDATOS(AS) QUE SE AUTODECLARAREM NEGROS(AS).",
+              "selected": false
+            },
+            {
+              "header": "## 4.3 - DA ORDEM DE CONVOCAÇÃO",
+              "selected": false
+            },
+            {
+              "header": "## 4.4 -DA SOLICITAÇÃO DE ATENDIMENTO ESPECIAL",
+              "selected": false
+            },
+            {
+              "header": "## 5 - DAS INSCRIÇÕES NA SELEÇÃO EXTERNA",
+              "selected": false
+            },
+            {
+              "header": "## 5.3 -INSCRIÇÕES",
+              "selected": false
+            },
+            {
+              "header": "## 6 - CONFIRMAÇÃO DE INSCRIÇÃO",
+              "selected": false
+            },
+            {
+              "header": "## 7 - DA ETAPA DE QUALIFICAÇÃO TÉCNICA(Avaliação de Conhecimento e Redação)",
+              "selected": false
+            },
+            {
+              "header": "## 7.1 - ESCRITURÁRIO -NOME DE RELACIONAMENTO: AGENTE DE TECNOLOGIA (exclusivamente para Microrregião 158 - TI) .",
+              "selected": false
+            },
+            {
+              "header": "## 7.2 -ESCRITURÁRIO -NOME DE RELACIONAMENTO: AGENTE COMERCIAL (para todas as Microrregiões, com exceção da Microrregião 158 - TI)",
+              "selected": false
+            },
+            {
+              "header": "## 7.3 -2ª ETAPA - PROVA DE REDAÇÃO (para todos os candidatos).",
+              "selected": false
+            },
+            {
+              "header": "## 8 - DAS NORMAS E DOS PROCEDIMENTOS RELATIVOS À CONTINUIDADE DA SELEÇÃO EXTERNA",
+              "selected": false
+            },
+            {
+              "header": "## 9 - DOS RECURSOS E DAS REVISÕES",
+              "selected": false
+            },
+            {
+              "header": "## 10 - DOS PROCEDIMENTOS SOB RESPONSABILIDADE DO BANCO DO BRASIL",
+              "selected": false
+            },
+            {
+              "header": "## 11 - DA CONTRATAÇÃO",
+              "selected": false
+            },
+            {
+              "header": "## 12 - DAS DISPOSIÇÕES FINAIS",
+              "selected": false
+            },
+            {
+              "header": "## VICE-PRESIDÊNCIA CORPORATIVA",
+              "selected": false
+            },
+            {
+              "header": "## ANEXO I - MUNICÍPIOS DE CONTRATAÇÃO E CIDADES DE REALIZAÇÃO DAS PROVAS",
+              "selected": false
+            },
+            {
+              "header": "## ANEXO II - QUADRO DE VAGAS/CADASTRO DE RESERVA",
+              "selected": false
+            },
+            {
+              "header": "## ESCRITURÁRIO -NOME DE RELACIONAMENTO: AGENTE DE TECNOLOGIA e AGENTE COMERCIAL",
+              "selected": false
+            },
+            {
+              "header": "## CONHECIMENTOS BÁSICOS",
+              "selected": true
+            },
+            {
+              "header": "## ESCRITURÁRIO -NOME DE RELACIONAMENTO: AGENTE DE TECNOLOGIA",
+              "selected": true
+            },
+            {
+              "header": "## ESCRITURÁRIO -NOME DE RELACIONAMENTO: AGENTE COMERCIAL",
+              "selected": true
+            },
+            {
+              "header": "## ANEXO IV - CRONOGAMA",
+              "selected": false
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Get exams",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get exams": {
+      "main": [
+        [
+          {
+            "node": "Aggregate exams",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get exam topics": {
+      "main": [
+        [
+          {
+            "node": "Aggregate topics into single list",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge exam_topic + topic + exam",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Aggregate topics into single list": {
+      "main": [
+        [
+          {
+            "node": "Get topics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get topics": {
+      "main": [
+        [
+          {
+            "node": "Merge exam_topic + topic + exam",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Aggregate2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate2": {
+      "main": [
+        [
+          {
+            "node": "GET exam subtopics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET exam subtopics": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Get topic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate3": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate exams": {
+      "main": [
+        [
+          {
+            "node": "Get exam topics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge exam_topic + topic + exam": {
+      "main": [
+        [
+          {
+            "node": "Aggregate into single list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate into single list": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Split list into items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split list into items": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Get topic": {
+      "main": [
+        [
+          {
+            "node": "Topic exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Topic exists?": {
+      "main": [
+        [
+          {
+            "node": "Link topic to exam",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create topic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create topic": {
+      "main": [
+        [
+          {
+            "node": "Link topic to exam",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Link topic to exam": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3b41f17d-40b1-45f5-a165-d02cd52b54d6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a08c308984b16bf0f355840820d69320ffbd04651219cb505ec0379fdeb93d33"
+  },
+  "id": "fMliKhwfBzpBtfxn",
+  "tags": []
+}

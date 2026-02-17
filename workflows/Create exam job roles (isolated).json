@@ -1,0 +1,228 @@
+{
+  "name": "Create exam job roles (isolated)",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "recruitment_offer_id"
+            },
+            {
+              "name": "exam_id"
+            },
+            {
+              "name": "file_path"
+            },
+            {
+              "name": "header_filter",
+              "type": "array"
+            }
+          ]
+        }
+      },
+      "id": "367b6609-eabe-489a-8c43-77476e718b49",
+      "typeVersion": 1.1,
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        64,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        480,
+        48
+      ],
+      "id": "41f0ebe7-77a7-46b4-8499-b5ceb55afc26",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "url": "=http://python-api:8000/extractor/job-roles/{{ $('When Executed by Another Workflow').item.json.exam_id }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "file_key",
+              "value": "={{ $('When Executed by Another Workflow').item.json.file_path }}"
+            },
+            {
+              "name": "file_bucket",
+              "value": "processed-files"
+            },
+            {
+              "name": "identified_exams",
+              "value": "={{ JSON.stringify($json.data) }}"
+            },
+            {
+              "name": "header_filter",
+              "value": "={{ $('When Executed by Another Workflow').item.json.header_filter }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 600000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        688,
+        48
+      ],
+      "id": "c6f41183-b701-4445-b619-c6da61d55e0e",
+      "name": "GET job roles"
+    },
+    {
+      "parameters": {
+        "tableId": "job_roles",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $json.name }}"
+            },
+            {
+              "fieldId": "salary",
+              "fieldValue": "={{ $json.salary }}"
+            },
+            {
+              "fieldId": "exam_id",
+              "fieldValue": "={{ $('When Executed by Another Workflow').item.json.exam_id }}"
+            },
+            {
+              "fieldId": "openings",
+              "fieldValue": "={{ $json.openings }}"
+            },
+            {
+              "fieldId": "has_cr_openings",
+              "fieldValue": "={{ $json.has_cr_openings }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        880,
+        48
+      ],
+      "id": "3f62b262-5dfb-4eaf-b1a3-cfb082ea6e7d",
+      "name": "Create job role",
+      "credentials": {
+        "supabaseApi": {
+          "id": "iowqJH6SvuJ1vc5Q",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "exams",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "recruitment_offer_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.recruitment_offer_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        272,
+        48
+      ],
+      "id": "4050ffe2-a53a-4fa6-a14d-ba2ee7480411",
+      "name": "Get exams",
+      "credentials": {
+        "supabaseApi": {
+          "id": "iowqJH6SvuJ1vc5Q",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "recruitment_offer_id": "0c1ad7cf-d770-4079-b562-d50b57138aaa",
+          "exam_id": "2",
+          "file_path": "3",
+          "header_filter": [
+            {}
+          ]
+        }
+      }
+    ]
+  },
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Get exams",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "GET job roles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET job roles": {
+      "main": [
+        [
+          {
+            "node": "Create job role",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get exams": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "43cfb7ee-db70-407e-8c60-48423f0e4305",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a08c308984b16bf0f355840820d69320ffbd04651219cb505ec0379fdeb93d33"
+  },
+  "id": "u24lLLKXKegRceNh",
+  "tags": []
+}

@@ -1,0 +1,351 @@
+{
+  "name": "Create exam offices (isolated)",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "recruitment_offer_id"
+            },
+            {
+              "name": "exam_id"
+            },
+            {
+              "name": "file_path"
+            },
+            {
+              "name": "header_filter",
+              "type": "array"
+            }
+          ]
+        }
+      },
+      "id": "0a88c4c0-0297-4cfa-a770-77ed10fdd63a",
+      "typeVersion": 1.1,
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        64,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "00a9c560-0b5e-445e-9ce4-bc6dd00882b7",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1104,
+        48
+      ],
+      "id": "78b3a341-b230-4d33-b499-4e9cf59010ab",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "tableId": "exam_offices",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "exam_id",
+              "fieldValue": "={{ $('When Executed by Another Workflow').item.json.exam_id }}"
+            },
+            {
+              "fieldId": "office_id",
+              "fieldValue": "={{ $json.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1552,
+        32
+      ],
+      "id": "4bcc26d4-9220-46b0-98eb-155ce373353a",
+      "name": "Link office to exam",
+      "credentials": {
+        "supabaseApi": {
+          "id": "iowqJH6SvuJ1vc5Q",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=http://python-api:8000/extractor/offices/{{ $('When Executed by Another Workflow').item.json.exam_id }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "file_key",
+              "value": "={{ $('When Executed by Another Workflow').item.json.file_path }}"
+            },
+            {
+              "name": "file_bucket",
+              "value": "processed-files"
+            },
+            {
+              "name": "identified_exams",
+              "value": "={{ JSON.stringify($json.data) }}"
+            },
+            {
+              "name": "header_filter",
+              "value": "={{ $('When Executed by Another Workflow').item.json.header_filter }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 600000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        688,
+        48
+      ],
+      "id": "39183ea3-4047-4055-8d7e-fc44a53feef3",
+      "name": "GET offices"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "exams",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "recruitment_offer_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.recruitment_offer_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        272,
+        48
+      ],
+      "id": "598ce8be-57c0-49df-b660-68471e4ff2de",
+      "name": "Get many rows",
+      "credentials": {
+        "supabaseApi": {
+          "id": "iowqJH6SvuJ1vc5Q",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        480,
+        48
+      ],
+      "id": "983a188e-def9-4b11-94ac-d5094aad83c4",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "offices",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "name",
+              "keyValue": "={{ $json.name }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        896,
+        48
+      ],
+      "id": "0adc434d-858d-4906-9d59-92e869b203b6",
+      "name": "Get office",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "iowqJH6SvuJ1vc5Q",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "offices",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $('GET offices').item.json.name }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1344,
+        128
+      ],
+      "id": "bf766fad-73d3-43fa-a6e1-afdbaa6d6aa0",
+      "name": "Create office",
+      "credentials": {
+        "supabaseApi": {
+          "id": "iowqJH6SvuJ1vc5Q",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "recruitment_offer_id": "0c1ad7cf-d770-4079-b562-d50b57138aaa",
+          "exam_id": "2",
+          "file_path": "3",
+          "header_filter": [
+            {}
+          ]
+        }
+      }
+    ]
+  },
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Get many rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Link office to exam",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create office",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Link office to exam": {
+      "main": [
+        []
+      ]
+    },
+    "Get many rows": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "GET offices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET offices": {
+      "main": [
+        [
+          {
+            "node": "Get office",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get office": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create office": {
+      "main": [
+        [
+          {
+            "node": "Link office to exam",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "25276b0e-765c-47f8-a374-7ce37e0d7002",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a08c308984b16bf0f355840820d69320ffbd04651219cb505ec0379fdeb93d33"
+  },
+  "id": "ajvByZ0pQvBUSB1m",
+  "tags": []
+}
