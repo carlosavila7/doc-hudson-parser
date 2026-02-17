@@ -85,7 +85,7 @@ with st.expander("Pipeline params"):
                     is_selected = st.checkbox(
                         f"`{header.get('header')}` ({round(header.get('token_approximation'))})", key=f"base_entities_{i}")
                     base_entities_sections.append(
-                        {"header": header, "selected": is_selected})
+                        {"header": header.get('header'), "selected": is_selected})
 
                     if is_selected: base_entity_token_approximation += header.get(
                         'token_approximation')
@@ -103,7 +103,7 @@ with st.expander("Pipeline params"):
                     is_selected = st.checkbox(
                         f"`{header.get('header')}` ({round(header.get('token_approximation'))})", key=f"exam_subtopics_{i}")
                     exam_subtopics_sections.append(
-                        {"header": header, "selected": is_selected})
+                        {"header": header.get('header'), "selected": is_selected})
                     
                     if is_selected: exam_subtopics_token_approximation += header.get(
                         'token_approximation')
@@ -120,7 +120,7 @@ with st.expander("Pipeline params"):
                     is_selected = st.checkbox(
                         f"`{header.get('header')}` ({round(header.get('token_approximation'))})", key=f"job_roles_{i}")
                     job_roles_sections.append(
-                        {"header": header, "selected": is_selected})
+                        {"header": header.get('header'), "selected": is_selected})
                     
                     if is_selected: job_roles_token_approximation += header.get(
                         'token_approximation')
@@ -137,7 +137,7 @@ with st.expander("Pipeline params"):
                     is_selected = st.checkbox(
                         f"`{header.get('header')}` ({round(header.get('token_approximation'))})", key=f"offices_{i}")
                     offices_sections.append(
-                        {"header": header, "selected": is_selected})
+                        {"header": header.get('header'), "selected": is_selected})
                     
                     if is_selected: offices_token_approximation += header.get(
                         'token_approximation')
