@@ -209,7 +209,6 @@ class ExtractorService:
         - salary (number)
         - openings (number): Total direct vacancies. Considers all direct openings like "ampla concorrência", "PCD (pessoa com deficiência)", "cota racial", etc. 
         - has_cr_openings (bool): Whether or not the job role has any cr openings.
-        - verification_exam_name (string): Brief quote from text proving this role belongs to the requested exam.
 
         # Constraint
         OUTPUT ONLY THE JSON ARRAY. NO MARKDOWN, NO EXPLANATION.
