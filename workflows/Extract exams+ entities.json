@@ -167,7 +167,8 @@
         -368
       ],
       "id": "220726bf-2b9e-4a4b-94c7-832e025d2934",
-      "name": "[pipe] topics with exam id"
+      "name": "[pipe] topics with exam id",
+      "disabled": true
     },
     {
       "parameters": {
@@ -180,7 +181,8 @@
         -368
       ],
       "id": "c6468993-f052-4c93-bd62-63237933bf97",
-      "name": "Loop over topics"
+      "name": "Loop over topics",
+      "disabled": true
     },
     {
       "parameters": {
@@ -327,7 +329,8 @@
         -608
       ],
       "id": "e253b9ae-02e8-440a-949e-5ca74743e85a",
-      "name": "[pipe] exam IDs"
+      "name": "[pipe] exam IDs",
+      "disabled": true
     },
     {
       "parameters": {
@@ -417,7 +420,7 @@
           "mappingMode": "defineBelow",
           "value": {
             "recruitment_offer_id": "={{ $('Create recruitment_offer').first().json.id }}",
-            "exam_id": "={{ $json.examId }}",
+            "exam_id": "={{ $json.id }}",
             "file_path": "={{ $('Webhook').first().json.body.file_path }}",
             "header_filter": "={{ $('Webhook').first().json.body.exam_subtopics_sections }}"
           },
@@ -491,7 +494,7 @@
           "mappingMode": "defineBelow",
           "value": {
             "recruitment_offer_id": "={{ $('Create recruitment_offer').first().json.id }}",
-            "exam_id": "={{ $json.examId }}",
+            "exam_id": "={{ $json.id }}",
             "file_path": "={{ $('Webhook').first().json.body.file_path }}",
             "header_filter": "={{ $('Webhook').first().json.body.exam_subtopics_sections }}"
           },
@@ -953,7 +956,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "b170f086-76cf-4bb3-abdc-b487597a2e68",
+  "versionId": "ead092f5-b418-4b77-a851-aed96ac9f8f6",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "a08c308984b16bf0f355840820d69320ffbd04651219cb505ec0379fdeb93d33"

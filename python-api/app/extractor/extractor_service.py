@@ -47,14 +47,12 @@ class ExtractorService:
 
         - name: Based on the context, give it a name so it can be identified. MUST be unique for each exam. May reference a job role, educational level or other related information.
         - education_level: BASIC for when the requirement is only `Ensino Fundamental`, MEDIUM for when the requirement is the `Ensino Médio`and SUPERIOR when some graduation IS required.
-        - exam_topics: an array of the entity [`exam_topics`](#exam_topics)
 
         JSON specification:
 
         ```json
         name: string
         education_level: "BASIC" | "MEDIUM" | "SUPERIOR",
-        exam_topics: exam_topics[],
         ```
 
         ## `recruitment_offers`
@@ -83,7 +81,7 @@ class ExtractorService:
 
         # Output
 
-        The JSON output must be a single object with the previous entities starting from the `recruitment_offers` and their relations.
+        The JSON output MUST be a single object like such.
 
         ```json
         {
@@ -97,11 +95,6 @@ class ExtractorService:
                 {
                     name: string,
                     education_level: "BASIC" | "MEDIUM" | "SUPERIOR",
-                    exam_topics: [
-                        {
-                            name: string,
-                        },
-                    ],
                 },
             ],
         }

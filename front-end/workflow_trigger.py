@@ -64,8 +64,8 @@ with st.expander("Pipeline params"):
 
     st.text("Select the document sections for each extraction:")
 
-    base_entities_tab, exam_subtopics_tab, job_roles_tab, offices_tab = st.tabs(
-        ["Base entities", "Exam subtopics", "Job roles", "Offices"])
+    base_entities_tab, job_roles_tab, offices_tab = st.tabs(
+        ["Offer + exams", "Job roles", "Offices"])
 
     base_entities_sections = []
     exam_subtopics_sections = []
@@ -92,23 +92,6 @@ with st.expander("Pipeline params"):
 
             st.badge(
                 f"~ {round(base_entity_token_approximation)} tokens", color="gray")
-
-    with exam_subtopics_tab:
-        if headers_res:
-            exam_subtopics_token_approximation = 0
-            headers = headers_res.json()
-
-            with st.container(height=450):
-                for i, header in enumerate(headers):
-                    is_selected = st.checkbox(
-                        f"`{header.get('header')}` ({round(header.get('token_approximation'))})", key=f"exam_subtopics_{i}")
-                    exam_subtopics_sections.append(
-                        {"header": header.get('header'), "selected": is_selected})
-                    
-                    if is_selected: exam_subtopics_token_approximation += header.get(
-                        'token_approximation')
-                    
-            st.badge(f"~ {round(exam_subtopics_token_approximation)} tokens", color="gray")
 
     with job_roles_tab:
         if headers_res:
