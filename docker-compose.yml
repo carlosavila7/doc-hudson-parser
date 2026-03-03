@@ -6,7 +6,7 @@ services:
       context: ./python-api
       dockerfile: Dockerfile
     container_name: python-api
-    restart: always
+    restart: no
     env_file:
       - ./python-api/.env
     ports:
@@ -17,7 +17,7 @@ services:
   n8n:
     image: docker.n8n.io/n8nio/n8n:latest
     container_name: n8n
-    restart: always
+    restart: no
     ports:
       - "5678:5678"
     environment:
